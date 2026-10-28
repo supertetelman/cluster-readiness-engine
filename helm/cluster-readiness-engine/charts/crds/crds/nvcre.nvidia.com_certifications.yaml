@@ -54,10 +54,12 @@ spec:
                     enum:
                     - kubernetes
                     - runai
+                    - slinky
                     type: string
                   queue:
-                    description: queue names an existing Run:ai queue. Required for
-                      Run:ai.
+                    description: |-
+                      queue names an existing Run:ai queue or Slinky partition. Required for Run:ai.
+                      Slinky defaults to the slurm-bridge partition.
                     maxLength: 63
                     type: string
                 required:
@@ -90,10 +92,12 @@ spec:
                               enum:
                               - kubernetes
                               - runai
+                              - slinky
                               type: string
                             queue:
-                              description: queue names an existing Run:ai queue. Required
-                                for Run:ai.
+                              description: |-
+                                queue names an existing Run:ai queue or Slinky partition. Required for Run:ai.
+                                Slinky defaults to the slurm-bridge partition.
                               maxLength: 63
                               type: string
                           required:

@@ -13,6 +13,11 @@ import (
 	nvcrev1alpha1 "github.com/NVIDIA/cluster-readiness-engine/api/v1alpha1"
 )
 
+const (
+	backendNameSlinky = "slinky"
+	backendNameRunai  = "runai"
+)
+
 // BackendScheduler resolves the small backend API into existing gang scheduler settings.
 func BackendScheduler(backend *nvcrev1alpha1.SchedulingBackend) (*nvcrev1alpha1.GangSchedulerSpec, error) {
 	if backend == nil {
@@ -24,25 +29,40 @@ func BackendScheduler(backend *nvcrev1alpha1.SchedulingBackend) (*nvcrev1alpha1.
 			return nil, fmt.Errorf("kubernetes backend does not accept a queue")
 		}
 		return nil, nil
-	case "runai":
+	case backendNameRunai:
 		if backend.Queue == "" || len(validation.IsValidLabelValue(backend.Queue)) != 0 {
 			return nil, fmt.Errorf("runai backend requires an existing queue with a valid Kubernetes label value")
 		}
 		return &nvcrev1alpha1.GangSchedulerSpec{SchedulerName: "runai-scheduler", Queue: backend.Queue, QueueLabelKey: "runai/queue"}, nil
+	case backendNameSlinky:
+		partition := backend.Queue
+		if partition == "" {
+			partition = "slurm-bridge"
+		}
+		if len(validation.IsValidLabelValue(partition)) != 0 {
+			return nil, fmt.Errorf("invalid Slinky partition %q", partition)
+		}
+		return &nvcrev1alpha1.GangSchedulerSpec{SchedulerName: "slurm-bridge-scheduler", Queue: partition, QueueLabelKey: "slinky.slurm.net/partition"}, nil
 	default:
 		return nil, fmt.Errorf("unsupported workload backend %q", backend.Name)
 	}
 }
 
-// ValidateBackendSupport rejects unsupported platform/workload combinations before creation.
+// ValidateBackendSupport rejects unsupported Slinky workloads before creation.
 func ValidateBackendSupport(spec *nvcrev1alpha1.WorkloadSpec, backend *nvcrev1alpha1.SchedulingBackend) error {
-	if backend != nil && backend.Name == "slinky" && spec.Inference != nil {
+	if backend == nil || backend.Name != backendNameSlinky {
+		return nil
+	}
+	if spec.Inference != nil {
 		return fmt.Errorf("inference is unsupported on Slinky; Slinky is training-only")
+	}
+	if spec.TrainJob == nil {
+		return fmt.Errorf("slinky training requires a TrainJob with a JobSet runtime")
 	}
 	return nil
 }
 
-// ApplyBackend adds project routing to a native Run:ai workload.
+// ApplyBackend adds project routing while each platform owns its submission path.
 func ApplyBackend(obj client.Object, backend *nvcrev1alpha1.SchedulingBackend) error {
 	gs, err := BackendScheduler(backend)
 	if err != nil {
@@ -51,9 +71,11 @@ func ApplyBackend(obj client.Object, backend *nvcrev1alpha1.SchedulingBackend) e
 	if gs == nil {
 		return nil
 	}
-	native, ok := obj.(*unstructured.Unstructured)
-	if !ok || (native.GroupVersionKind() != (&RunaiMPIAdapter{}).GVK() && native.GroupVersionKind() != (&RunaiProbeAdapter{}).GVK()) {
-		return fmt.Errorf("runai backend requires a native Run:ai workload, not scheduler routing on %T", obj)
+	if backend.Name == backendNameRunai {
+		native, ok := obj.(*unstructured.Unstructured)
+		if !ok || (native.GroupVersionKind() != (&RunaiMPIAdapter{}).GVK() && native.GroupVersionKind() != (&RunaiProbeAdapter{}).GVK()) {
+			return fmt.Errorf("runai backend requires a native Run:ai workload, not scheduler routing on %T", obj)
+		}
 	}
 	labels, err := InsertConsistentLabel(obj.GetLabels(), gs.QueueLabelKey, gs.Queue, "spec.backend.queue")
 	if err != nil {

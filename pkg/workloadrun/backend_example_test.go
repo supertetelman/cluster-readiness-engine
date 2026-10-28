@@ -30,6 +30,7 @@ func TestTrainJobExampleBackendCapabilities(t *testing.T) {
 	for _, backend := range []nvcrev1alpha1.SchedulingBackend{
 		{Name: "kubernetes"},
 		{Name: "runai", Queue: "test-project"},
+		{Name: "slinky", Queue: "test-partition"},
 	} {
 		t.Run(backend.Name, func(t *testing.T) {
 			input := run.DeepCopy()

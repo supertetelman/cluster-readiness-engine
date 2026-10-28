@@ -234,10 +234,11 @@ type GoodputMeasurementConfig struct {
 type SchedulingBackend struct {
 	// name selects the submission platform. Run:ai creates native Run:ai workload CRDs.
 	// Omitted backend preserves existing Kubernetes behavior.
-	// +kubebuilder:validation:Enum=kubernetes;runai
+	// +kubebuilder:validation:Enum=kubernetes;runai;slinky
 	Name string `json:"name"`
 
-	// queue names an existing Run:ai queue. Required for Run:ai.
+	// queue names an existing Run:ai queue or Slinky partition. Required for Run:ai.
+	// Slinky defaults to the slurm-bridge partition.
 	// +optional
 	// +kubebuilder:validation:MaxLength=63
 	Queue string `json:"queue,omitempty"`
