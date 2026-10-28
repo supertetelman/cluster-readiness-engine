@@ -82,7 +82,7 @@ func ForBackend(spec *nvcrev1alpha1.WorkloadSpec, backend *nvcrev1alpha1.Schedul
 	if err != nil {
 		return nil, err
 	}
-	if backend == nil || backend.Name != "runai" {
+	if backend == nil || backend.Name != backendNameRunai {
 		return adapter, nil
 	}
 	if spec.MPIJob != nil {

@@ -153,6 +153,11 @@ func BuildObject(
 	md *nvcrev1alpha1.WorkloadMetadata,
 	backends ...*nvcrev1alpha1.SchedulingBackend,
 ) (client.Object, error) {
+	if len(backends) > 0 {
+		if err := ValidateBackendSupport(spec, backends[0]); err != nil {
+			return nil, err
+		}
+	}
 	requested := LabelsOf(md)
 	if err := ValidateLabels(requested, "spec.workloadMetadata.labels"); err != nil {
 		return nil, err

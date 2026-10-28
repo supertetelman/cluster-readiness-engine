@@ -60,6 +60,28 @@ For the Kubernetes baseline, use a namespace outside Run:ai project management:
 Run:ai admission may rewrite a pod scheduler in its project namespace. Capture
 GPU compute processes while the test runs, launcher logs, NVCRE results, and
 cleanup for both backends. Result comparison belongs to external CI.
+## Slinky training
+
+Use `backend: {name: slinky}` on a WorkloadRun or Certification to route its
+TrainJob's JobSet through `slurm-bridge-scheduler`. Set `queue` to select a
+Slurm partition; its default is `slurm-bridge`. NVCRE writes the partition
+annotation on the generated JobSet and reuses the workload and log profiles.
+The Slurm Bridge must already be connected to Slurm with matching compute
+node names and working GPU resources. NVCRE does not install these services.
+
+This integration uses Slurm Bridge's per-pod JobSet scheduling. It preserves
+the shared runtime's worker-readiness dependency before creating the MPI
+launcher. NVCRE requests non-exclusive allocations so the CPU-only launcher
+can share a node with a GPU worker. Configure Slurm Bridge's `mcsLabel` and
+Slurm's MCS isolation for this mode; each worker still reserves its GPU count.
+Atomic gang scheduling through PodGroup is not configured.
+Bare MPIJob grouping is not supported by this integration; use the shared
+WorkloadRun MPI path, as in `examples/mpi-workloadrun.yaml`. Slinky support in NVCRE
+is training-only.
+
+Verify `scheduler.slinky.slurm.net/slurm-jobid` on the workload pods and inspect
+the corresponding Slurm allocation in addition to NVCRE's completion status.
+A rendered scheduler name alone does not prove a Slinky execution.
 
 ## Adding a scheduler or a test
 

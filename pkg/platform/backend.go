@@ -4,6 +4,7 @@
 package platform
 
 import (
+	"encoding/json"
 	"fmt"
 
 	nvcrev1alpha1 "github.com/NVIDIA/cluster-readiness-engine/api/v1alpha1"
@@ -15,6 +16,9 @@ import (
 func ApplySchedulingBackend(spec *nvcrev1alpha1.WorkflowSpec, backend *nvcrev1alpha1.SchedulingBackend) error {
 	if backend == nil {
 		return nil
+	}
+	if err := workload.ValidateBackendSupport(&spec.JobTemplate.Spec.Workload, backend); err != nil {
+		return err
 	}
 	gs, err := workload.BackendScheduler(backend)
 	if err != nil {
@@ -36,6 +40,11 @@ func ApplySchedulingBackend(spec *nvcrev1alpha1.WorkflowSpec, backend *nvcrev1al
 		if err := ApplyGangSchedulerToDependencies(spec.Dependencies, gs); err != nil {
 			return err
 		}
+		if backend.Name == "slinky" {
+			if err := applySlinkyAllocation(spec.Dependencies, gs.Queue); err != nil {
+				return err
+			}
+		}
 		spec.GangScheduler = gs
 	}
 	labels, err := workload.InsertConsistentLabel(workload.LabelsOf(spec.JobTemplate.Spec.WorkloadMetadata), gs.QueueLabelKey, gs.Queue, JobTemplateWorkloadLabelsPath)
@@ -43,5 +52,29 @@ func ApplySchedulingBackend(spec *nvcrev1alpha1.WorkflowSpec, backend *nvcrev1al
 		return err
 	}
 	spec.JobTemplate.Spec.WorkloadMetadata = workload.MetadataFrom(labels)
+	return nil
+}
+
+// The bridge reads partition annotations on the generated JobSet, not on its pods.
+func applySlinkyAllocation(deps []nvcrev1alpha1.DependencySpec, partition string) error {
+	for i := range deps {
+		var obj map[string]any
+		if err := json.Unmarshal(deps[i].Raw, &obj); err != nil {
+			return err
+		}
+		if obj[keyKind] != kindTrainingRuntime {
+			continue
+		}
+		template := ensureMap(ensureMap(obj, keySpec), keyTemplate)
+		annotations := ensureMap(ensureMap(template, keyMetadata), "annotations")
+		annotations["slurmjob.slinky.slurm.net/partition"] = partition
+		// The CPU-only MPI launcher must fit beside a GPU worker on the same node.
+		annotations["slurmjob.slinky.slurm.net/exclusive"] = "false"
+		raw, err := json.Marshal(obj)
+		if err != nil {
+			return err
+		}
+		deps[i].Raw = raw
+	}
 	return nil
 }
