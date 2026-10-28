@@ -1,0 +1,20 @@
+apiVersion: nvcre.nvidia.com/v1alpha1
+kind: Job
+metadata:
+  name: test-inference-runai
+  namespace: default
+spec:
+  backend:
+    name: runai
+    queue: test-queue
+  workload:
+    inference:
+      activeDeadlineSeconds: 60
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: probe
+              image: python:3.12-slim
+              command: [python, -c, "print('passed')"]

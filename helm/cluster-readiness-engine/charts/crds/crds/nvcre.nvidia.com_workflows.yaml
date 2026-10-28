@@ -405,6 +405,12 @@ spec:
                         maxProperties: 1
                         minProperties: 1
                         properties:
+                          inference:
+                            description: |-
+                              inference runs a finite verification Job against serving dependencies.
+                              Success requires the probe to finish successfully, not merely a ready server.
+                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
                           mpiJob:
                             description: |-
                               mpiJob configures a Kubeflow MPI Operator v2beta1 workload.

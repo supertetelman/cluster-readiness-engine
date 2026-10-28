@@ -161,9 +161,9 @@ func (r *JobReconciler) workloadReader() client.Reader {
 	return r.Client
 }
 
-// MPIJob is optional and is polled without starting a cluster-wide informer.
+// Optional workload kinds are polled without starting cluster-wide informers.
 func (r *JobReconciler) readerForWorkload(job *nvcrev1alpha1.Job) client.Reader {
-	if job.Spec.Workload.MPIJob != nil {
+	if job.Spec.Workload.MPIJob != nil || job.Spec.Workload.Inference != nil {
 		return r.workloadReader()
 	}
 	return r.Client
@@ -365,7 +365,12 @@ func (r *JobReconciler) deleteWorkloadByRef(ctx context.Context, job *nvcrev1alp
 		return fmt.Errorf("failed to get workload %s/%s: %w", ref.Kind, ref.Name, err)
 	}
 
-	if err := r.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
+	var deleteOptions []client.DeleteOption
+	if job.Spec.Workload.Inference != nil {
+		// Batch Jobs otherwise orphan their probe pods when deleted directly.
+		deleteOptions = append(deleteOptions, client.PropagationPolicy(metav1.DeletePropagationBackground))
+	}
+	if err := r.Delete(ctx, obj, deleteOptions...); err != nil && !apierrors.IsNotFound(err) {
 		// Forbidden in a terminating namespace: the RoleBinding that granted
 		// the delete may be gone already, and the namespace controller
 		// deletes the workload anyway. Retrying would hold this finalizer,

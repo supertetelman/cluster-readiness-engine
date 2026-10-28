@@ -4,6 +4,7 @@
 package v1alpha1
 
 import (
+	batchv1 "k8s.io/api/batch/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
@@ -128,6 +129,14 @@ type WorkloadReference struct {
 // +kubebuilder:validation:MinProperties=1
 // +kubebuilder:validation:MaxProperties=1
 type WorkloadSpec struct {
+	// inference runs a finite verification Job against serving dependencies.
+	// Success requires the probe to finish successfully, not merely a ready server.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
+	// +optional
+	Inference *batchv1.JobSpec `json:"inference,omitempty"`
+
 	// mpiJob configures a Kubeflow MPI Operator v2beta1 workload.
 	// The MPI Operator validates its spec. Preserve it here instead of
 	// duplicating two complete Pod schemas in every NVCRE CRD and Helm release.

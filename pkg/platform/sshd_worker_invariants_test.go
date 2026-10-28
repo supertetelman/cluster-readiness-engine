@@ -277,6 +277,9 @@ func renderCatalogCase(t testing.TB, in sshdInvariantsInput) ([]foundContainer, 
 				continue
 			}
 
+			if spec.JobTemplate.Spec.Workload.Inference != nil {
+				continue
+			}
 			var base []foundContainer
 			for _, dep := range spec.Dependencies {
 				base = append(base, collectContainers(dep, source, false, false)...)

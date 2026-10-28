@@ -1457,6 +1457,8 @@ func objectForKind(kind string) (client.Object, bool, error) {
 		return &nvcrev1alpha1.LogProfile{}, false, nil
 	case "Namespace":
 		return &corev1.Namespace{}, false, nil
+	case "TrainingWorkload":
+		return (&workload.RunaiProbeAdapter{}).NewObject(), true, nil
 	case "DistributedWorkload":
 		return (&workload.RunaiMPIAdapter{}).NewObject(), true, nil
 	case "MPIJob":
@@ -1791,6 +1793,17 @@ func sanitizeObject(obj client.Object) {
 		clearConditionTimestamps(o.Status.Conditions)
 	case *batchv1.Job:
 		clearBatchJobConditionTimestamps(o.Status.Conditions)
+		// The batch API defaults these selectors from a newly allocated UID.
+		for _, key := range []string{"batch.kubernetes.io/controller-uid", "controller-uid"} {
+			if _, ok := o.Spec.Template.Labels[key]; ok {
+				o.Spec.Template.Labels[key] = "<uid>"
+			}
+			if o.Spec.Selector != nil {
+				if _, ok := o.Spec.Selector.MatchLabels[key]; ok {
+					o.Spec.Selector.MatchLabels[key] = "<uid>"
+				}
+			}
+		}
 	}
 }
 

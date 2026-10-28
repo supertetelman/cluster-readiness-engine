@@ -1,0 +1,131 @@
+{
+  "Job/test-inference-runai": {
+    "kind": "Job",
+    "apiVersion": "nvcre.nvidia.com/v1alpha1",
+    "metadata": {
+      "name": "test-inference-runai",
+      "namespace": "default",
+      "finalizers": [
+        "nvcre.nvidia.com/finalizer"
+      ]
+    },
+    "spec": {
+      "backend": {
+        "name": "runai",
+        "queue": "test-queue"
+      },
+      "workload": {
+        "inference": {
+          "activeDeadlineSeconds": 60,
+          "backoffLimit": 0,
+          "template": {
+            "metadata": {},
+            "spec": {
+              "containers": [
+                {
+                  "name": "probe",
+                  "image": "python:3.12-slim",
+                  "command": [
+                    "python",
+                    "-c",
+                    "print('passed')"
+                  ],
+                  "resources": {}
+                }
+              ],
+              "restartPolicy": "Never"
+            }
+          }
+        }
+      }
+    },
+    "status": {
+      "conditions": [
+        {
+          "type": "InProgress",
+          "status": "True",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "WorkloadPending",
+          "message": "Workload TrainingWorkload/test-inference-runai-workload is pending"
+        },
+        {
+          "type": "Succeeded",
+          "status": "False",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "NotApplicable",
+          "message": ""
+        },
+        {
+          "type": "Failed",
+          "status": "False",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "NotApplicable",
+          "message": ""
+        }
+      ],
+      "workloadRef": {
+        "apiVersion": "run.ai/v2alpha1",
+        "kind": "TrainingWorkload",
+        "name": "test-inference-runai-workload",
+        "namespace": "default"
+      }
+    }
+  },
+  "TrainingWorkload/test-inference-runai-workload": {
+    "apiVersion": "run.ai/v2alpha1",
+    "kind": "TrainingWorkload",
+    "metadata": {
+      "labels": {
+        "app.kubernetes.io/managed-by": "nvcre",
+        "nvcre.nvidia.com/job": "test-inference-runai",
+        "runai/queue": "test-queue"
+      },
+      "name": "test-inference-runai-workload",
+      "namespace": "default",
+      "ownerReferences": [
+        {
+          "apiVersion": "nvcre.nvidia.com/v1alpha1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Job",
+          "name": "test-inference-runai",
+          "uid": ""
+        }
+      ]
+    },
+    "spec": {
+      "backoffLimit": {
+        "value": 0
+      },
+      "command": {
+        "value": "'timeout' '--kill-after=10s' '60' 'python' '-c' '$(NVCRE_COMMAND_5)'"
+      },
+      "environment": {
+        "items": {
+          "NVCRE_COMMAND_5": {
+            "value": "print('passed')"
+          }
+        }
+      },
+      "gpuDevices": {
+        "value": 0
+      },
+      "image": {
+        "value": "python:3.12-slim"
+      },
+      "labels": {
+        "items": {
+          "nvcre.nvidia.com/job": {
+            "value": "test-inference-runai"
+          }
+        }
+      },
+      "restartPolicy": {
+        "value": "Never"
+      }
+    }
+  }
+}

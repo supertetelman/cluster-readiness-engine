@@ -103,6 +103,10 @@ func projectImagePullSecrets(t testing.TB, in imagePullSecretsInput) imagePullSe
 				proj.Violations = append(proj.Violations, source+": build failed: "+err.Error())
 				continue
 			}
+			// Inference pod templates and the probe are pinned by TestVLLMCatalog.
+			if spec.JobTemplate.Spec.Workload.Inference != nil {
+				continue
+			}
 			baseJobs, err := baseReplicatedJobNames(spec)
 			if err != nil {
 				proj.Violations = append(proj.Violations, source+": "+err.Error())

@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+apiVersion: nvcre.nvidia.com/v1alpha1
+kind: Certification
+metadata:
+  name: runai-vllm
+  namespace: runai-nvcre
+spec:
+  backend:
+    name: runai
+    queue: nvcre
+  target:
+    nodeSelector:
+      nvidia.com/gpu.product: NVIDIA-A100-SXM4-80GB
+  nodesPerJob: 1
+  gpusPerNode: 1
+  categories:
+    - domain: inference
+      variant: vllm-single
+    - domain: inference
+      variant: vllm-distributed

@@ -1,0 +1,16 @@
+spec:
+  backend:
+    name: runai
+    queue: test-queue
+  workload:
+    inference:
+      activeDeadlineSeconds: 60
+      backoffLimit: 0
+      template:
+        spec:
+          restartPolicy: Never
+          containers:
+            - name: probe
+              image: python:3.12-slim
+              command: [python, -c, "print('passed')"]
+outcome: Complete

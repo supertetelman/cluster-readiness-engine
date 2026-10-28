@@ -364,7 +364,7 @@ func launcherImage(launcherJob map[string]any) string {
 	return ""
 }
 
-// PreserveSchedulingFields copies the gang-scheduling fields ADR-076 writes
+// PreserveSchedulingFields protects native serving ports and the gang-scheduling fields ADR-076 writes
 // from original into renamed, and returns the corrected document.
 //
 // It exists because per-job dependency renaming rewrites every quoted
@@ -381,16 +381,14 @@ func launcherImage(launcherJob map[string]any) string {
 // here instead would silently overwrite that override and let the Job run in a
 // queue the operator did not choose.
 //
-// It is a no-op when gs configures nothing, since then there is no queue label
-// key to identify.
+// Native ports and their queue label are protected independently of gs.
+// For TrainingRuntimes this is a no-op when gs configures nothing.
 func PreserveSchedulingFields(
 	original, renamed []byte, gs *nvcrev1alpha1.GangSchedulerSpec,
 ) ([]byte, error) {
-	if gs == nil || gs.SchedulerName == "" || len(original) == 0 || len(renamed) == 0 {
+	if len(original) == 0 || len(renamed) == 0 {
 		return renamed, nil
 	}
-	queueKey := gangSchedulerQueueLabelKey(gs.QueueLabelKey)
-
 	var before, after map[string]any
 	if err := json.Unmarshal(original, &before); err != nil {
 		return nil, fmt.Errorf("unmarshal pre-rename dependency: %w", err)
@@ -398,9 +396,16 @@ func PreserveSchedulingFields(
 	if err := json.Unmarshal(renamed, &after); err != nil {
 		return nil, fmt.Errorf("unmarshal renamed dependency: %w", err)
 	}
-	if kind, _ := after[keyKind].(string); kind != kindTrainingRuntime {
+	if kind, _ := after[keyKind].(string); kind == kindRunaiInference || kind == kindRunaiDistributedInference {
+		return preserveRunaiServingFields(before, after)
+	} else if kind != kindTrainingRuntime {
 		return renamed, nil
 	}
+
+	if gs == nil || gs.SchedulerName == "" {
+		return renamed, nil
+	}
+	queueKey := gangSchedulerQueueLabelKey(gs.QueueLabelKey)
 
 	beforeJobs, okBefore := nestedSlice(before, keySpec, keyTemplate, keySpec, keyReplicatedJobs)
 	afterJobs, okAfter := nestedSlice(after, keySpec, keyTemplate, keySpec, keyReplicatedJobs)

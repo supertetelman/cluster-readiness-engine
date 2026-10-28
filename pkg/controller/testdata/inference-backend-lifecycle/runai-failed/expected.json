@@ -1,0 +1,8 @@
+{
+  "deleted": true,
+  "deletionPropagation": "Background",
+  "kind": "TrainingWorkload",
+  "outcome": "Failed",
+  "pendingReason": "WorkloadPending",
+  "status": "True"
+}

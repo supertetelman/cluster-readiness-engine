@@ -145,6 +145,78 @@
       "scripts": []
     },
     {
+      "entry": "inference/vllm-distributed@NVIDIA-A100-SXM4-80GB",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-distributed@NVIDIA-GB200-NVL72",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-distributed@NVIDIA-GB300",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-distributed@NVIDIA-H100-80GB-HBM3",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-distributed@NVIDIA-L40S",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-distributed@NVIDIA-RTX-PRO-6000-Blackwell-Server-Edition",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-single@NVIDIA-A100-SXM4-80GB",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-single@NVIDIA-GB200-NVL72",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-single@NVIDIA-GB300",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-single@NVIDIA-H100-80GB-HBM3",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-single@NVIDIA-L40S",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-single@NVIDIA-RTX-PRO-6000-Blackwell-Server-Edition",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
       "entry": "training/nemotron5-56b@NVIDIA-A100-SXM4-80GB",
       "scripts": [
         ".dependencies[].data.train.sh"

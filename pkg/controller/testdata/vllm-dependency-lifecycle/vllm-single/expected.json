@@ -1,0 +1,83 @@
+{
+  "backend": {
+    "name": "runai",
+    "queue": "nvcre"
+  },
+  "jobScoped": [
+    "vllm-single-probe-validation",
+    "vllm-single-service-validation",
+    "vllm-single-server-validation"
+  ],
+  "probeEnv": [
+    {
+      "name": "VLLM_SERVICE",
+      "value": "vllm-single-service-validation"
+    },
+    {
+      "name": "VLLM_MODEL",
+      "value": "Qwen/Qwen2.5-0.5B-Instruct"
+    },
+    {
+      "name": "TIMEOUT_SECONDS",
+      "value": "600"
+    }
+  ],
+  "servers": [
+    {
+      "labels": {
+        "items": {
+          "nvcre-vllm-server": {
+            "value": "vllm-single-validation"
+          }
+        }
+      },
+      "nodeAffinityRequired": {
+        "nodeSelectorTerms": [
+          {
+            "matchExpressions": [
+              {
+                "key": "kubernetes.io/hostname",
+                "operator": "In",
+                "values": [
+                  "gpu-a",
+                  "gpu-b"
+                ]
+              },
+              {
+                "key": "gpu-family",
+                "operator": "In",
+                "values": [
+                  "a100"
+                ]
+              },
+              {
+                "key": "nvidia.com/gpu.product",
+                "operator": "In",
+                "values": [
+                  "NVIDIA-A100-PCIE-40GB"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "tolerations": {
+        "items": {
+          "0": {
+            "value": {
+              "operator": "Exists",
+              "tolerationKey": "nvidia.com/gpu"
+            }
+          }
+        }
+      }
+    }
+  ],
+  "service": {
+    "resource": "vllm-single-service-validation",
+    "selector": {
+      "nvcre-vllm-server": "vllm-single-validation"
+    }
+  },
+  "workflowScoped": null
+}

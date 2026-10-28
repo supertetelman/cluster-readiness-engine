@@ -25,6 +25,18 @@
       "scripts": []
     },
     {
+      "entry": "inference/vllm-distributed@NVIDIA-GB200-NVL72",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
+      "entry": "inference/vllm-single@NVIDIA-GB200-NVL72",
+      "scripts": [
+        ".dependencies[].data.probe.py"
+      ]
+    },
+    {
       "entry": "training/nemotron5-56b@NVIDIA-GB200-NVL72",
       "scripts": [
         ".dependencies[].data.train.sh"

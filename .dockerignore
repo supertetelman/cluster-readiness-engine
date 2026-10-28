@@ -14,4 +14,5 @@
 !pkg/catalog/entries/**/*.yaml
 !pkg/catalog/entries/**/*.xml
 !pkg/catalog/entries/**/*.sh
+!pkg/catalog/entries/**/*.py
 !pkg/platform/overrides/**/*.yaml

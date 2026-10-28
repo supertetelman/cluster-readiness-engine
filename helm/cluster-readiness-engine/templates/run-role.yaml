@@ -95,5 +95,45 @@ rules:
 
 # Native Run:ai distributed training, read live when selected.
 - apiGroups: [run.ai]
-  resources: [distributedworkloads]
-  verbs: [create, update, patch, delete]
+  resources: [distributedworkloads, trainingworkloads, inferenceworkloads, distributedinferenceworkloads]
+  verbs: [get, create, update, patch, delete]
+- apiGroups:
+  - batch
+  resources:
+  - jobs
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - apps
+  resources:
+  - deployments
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - ""
+  resources:
+  - services
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update
+- apiGroups:
+  - leaderworkerset.x-k8s.io
+  resources:
+  - leaderworkersets
+  verbs:
+  - create
+  - delete
+  - get
+  - patch
+  - update

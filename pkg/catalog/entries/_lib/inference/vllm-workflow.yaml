@@ -1,0 +1,169 @@
+{{- $image := "vllm/vllm-openai:v0.29.0@sha256:c2914767605584b6d8f45686b82de173ecc99e781897aa3d0a66dacd72c51ae1" -}}
+{{- $model := "Qwen/Qwen2.5-0.5B-Instruct" -}}
+# Workload Kit vLLM scenarios share the image, model, and request verification.
+# The server is a workflow dependency; the finite request Job determines success.
+dependencies:
+  - apiVersion: v1
+    kind: ConfigMap
+    metadata:
+      name: {{ .EntryName }}-probe
+    data:
+      probe.py: |
+{{ lib "inference/vllm-probe.py" . | indent 8 }}
+  - apiVersion: v1
+    kind: Service
+    metadata:
+      name: {{ .EntryName }}-service
+    spec:
+      selector:
+        nvcre-vllm-server: {{ .EntryName }}
+      ports:
+        - name: http
+          port: 8000
+          targetPort: 8000
+{{- if eq .EntryName "vllm-distributed" }}
+  - apiVersion: leaderworkerset.x-k8s.io/v1
+    kind: LeaderWorkerSet
+    metadata:
+      name: {{ .EntryName }}-server
+    spec:
+      replicas: 1
+      leaderWorkerTemplate:
+        size: 2
+        restartPolicy: RecreateGroupOnPodRestart
+        leaderTemplate:
+          metadata:
+            labels:
+              nvcre-vllm-server: {{ .EntryName }}
+          spec:
+{{ lib "inference/pull-secrets.yaml" . | indent 12 }}
+            containers:
+              - name: vllm
+                image: {{ $image }}
+                command: [sh, -ec]
+                args:
+                  - |
+                    uv venv --system-site-packages --python python3 /tmp/ray-venv
+                    export VIRTUAL_ENV=/tmp/ray-venv
+                    export PATH=/tmp/ray-venv/bin:$PATH
+                    uv pip install 'ray[cgraph,default]==2.56.0'
+                    bash /vllm-workspace/examples/ray_serving/multi-node-serving.sh leader --ray_cluster_size="$LWS_GROUP_SIZE"
+                    exec python3 -m vllm.entrypoints.openai.api_server --port 8000 --model {{ $model }} --tensor-parallel-size 1 --pipeline-parallel-size 2 --distributed-executor-backend ray
+                ports:
+                  - containerPort: 8000
+                resources:
+                  requests:
+                    cpu: "1"
+                    memory: 4Gi
+                  limits:
+                    nvidia.com/gpu: "1"
+                    memory: 12Gi
+                volumeMounts:
+                  - name: shm
+                    mountPath: /dev/shm
+                readinessProbe:
+                  httpGet: {path: /health, port: 8000}
+                  periodSeconds: 5
+                  timeoutSeconds: 2
+            volumes:
+              - name: shm
+                emptyDir: {medium: Memory, sizeLimit: 1Gi}
+        workerTemplate:
+          spec:
+{{ lib "inference/pull-secrets.yaml" . | indent 12 }}
+            containers:
+              - name: vllm
+                image: {{ $image }}
+                command: [sh, -ec]
+                args:
+                  - |
+                    uv venv --system-site-packages --python python3 /tmp/ray-venv
+                    export VIRTUAL_ENV=/tmp/ray-venv
+                    export PATH=/tmp/ray-venv/bin:$PATH
+                    uv pip install 'ray[cgraph,default]==2.56.0'
+                    exec bash /vllm-workspace/examples/ray_serving/multi-node-serving.sh worker --ray_address="$LWS_LEADER_ADDRESS"
+                resources:
+                  requests:
+                    cpu: "1"
+                    memory: 4Gi
+                  limits:
+                    nvidia.com/gpu: "1"
+                    memory: 12Gi
+                volumeMounts:
+                  - name: shm
+                    mountPath: /dev/shm
+            volumes:
+              - name: shm
+                emptyDir: {medium: Memory, sizeLimit: 1Gi}
+{{- else }}
+  - apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: {{ .EntryName }}-server
+    spec:
+      replicas: 1
+      selector:
+        matchLabels:
+          nvcre-vllm-server: {{ .EntryName }}
+      template:
+        metadata:
+          labels:
+            nvcre-vllm-server: {{ .EntryName }}
+        spec:
+{{ lib "inference/pull-secrets.yaml" . | indent 10 }}
+          containers:
+            - name: vllm
+              image: {{ $image }}
+              args: [--model, {{ $model }}, --port, "8000"]
+              ports:
+                - containerPort: 8000
+              resources:
+                requests:
+                  cpu: "1"
+                  memory: 4Gi
+                limits:
+                  nvidia.com/gpu: "1"
+                  memory: 12Gi
+              readinessProbe:
+                httpGet: {path: /health, port: 8000}
+                periodSeconds: 5
+                timeoutSeconds: 2
+{{- end }}
+jobTemplate:
+  spec:
+    workload:
+      inference:
+        backoffLimit: 0
+        activeDeadlineSeconds: 900
+        template:
+          spec:
+            restartPolicy: Never
+{{ lib "inference/pull-secrets.yaml" . | indent 12 }}
+            containers:
+              - name: probe
+                image: python:3.12-slim
+                command: [python3, /probe/probe.py]
+                env:
+                  - name: VLLM_SERVICE
+                    value: {{ .EntryName }}-service
+                  - name: VLLM_MODEL
+                    value: {{ $model }}
+                  - name: TIMEOUT_SECONDS
+                    value: "600"
+                resources:
+                  requests: {cpu: 100m, memory: 64Mi}
+                  limits: {memory: 256Mi}
+                volumeMounts:
+                  - name: probe
+                    mountPath: /probe
+                    readOnly: true
+            volumes:
+              - name: probe
+                configMap:
+                  name: {{ .EntryName }}-probe
+orchestration:
+  placement: Unpinned
+  iterations: 1
+  execution:
+    maxConcurrent: 1
+    timeoutPerJob: 20m

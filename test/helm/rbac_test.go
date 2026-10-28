@@ -183,6 +183,9 @@ func qualifiedResource(group, resource string) string {
 // reported by TestRunRoleCoversEveryDependencyKind rather than skipped, so
 // adding a dependency kind to the catalog forces a decision about its grant.
 var dependencyKindToResource = map[string]requiredAccess{
+	"Deployment":            {Group: "apps", Resource: "deployments"},
+	"Service":               {Group: "", Resource: "services"},
+	"LeaderWorkerSet":       {Group: "leaderworkerset.x-k8s.io", Resource: "leaderworkersets"},
 	"ConfigMap":             {Group: "", Resource: "configmaps"},
 	"PersistentVolumeClaim": {Group: "", Resource: "persistentvolumeclaims"},
 	"TrainingRuntime":       {Group: "trainer.kubeflow.org", Resource: "trainingruntimes"},

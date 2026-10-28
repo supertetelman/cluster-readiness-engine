@@ -61,6 +61,26 @@ Run:ai admission may rewrite a pod scheduler in its project namespace. Capture
 GPU compute processes while the test runs, launcher logs, NVCRE results, and
 cleanup for both backends. Result comparison belongs to external CI.
 
+## Native Run:ai inference
+
+The [vLLM example](https://github.com/NVIDIA/cluster-readiness-engine/blob/main/examples/runai-vllm.yaml)
+runs the Workload Kit's single-GPU and two-node distributed scenarios. The
+same image, Qwen model, Ray setup, and request probe remain in the shared catalog.
+
+With `backend.name: runai`, NVCRE submits `InferenceWorkload` for the single
+server and `DistributedInferenceWorkload` for the leader/worker server. Run:ai
+owns the resulting Knative Service or LeaderWorkerSet. Install Knative Serving
+for single-server inference and the LWS controller for distributed inference.
+The validation lab uses Run:ai 2.26.50, Knative Serving 1.22.0 and LWS 0.9.0.
+
+The finite CPU request probe runs as a native Run:ai `TrainingWorkload`, so its
+success means a real chat completion returned nonempty assistant content.
+Its image must provide GNU `timeout` (the catalog uses Python slim/coreutils);
+the adapter enforces the shared probe deadline inside the container. Server
+readiness alone never marks the NVCRE test successful. Native resources,
+services and probe ConfigMaps share the Job's dependency lifecycle and cleanup.
+Slinky inference is explicitly unsupported; Slinky remains training-only.
+
 ## Adding a scheduler or a test
 
 The workload spec describes **what runs**. `ForBackend` selects the resource

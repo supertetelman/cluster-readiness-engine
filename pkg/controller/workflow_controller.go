@@ -1530,10 +1530,27 @@ func (r *WorkflowReconciler) createJobForGroup(ctx context.Context, workflow *nv
 	jobName := r.getGroupJobName(workflow, group.Name, orch.CurrentIteration, group.Retries)
 
 	specCopy := groupJobSpec(workflow)
+	placement := workflow.Spec.Orchestration.Placement
+	target := workflow.Spec.Orchestration.Target
+	unpinned := nvcrev1alpha1.IsUnpinned(placement)
+	var gpuProducts []string
+	if orch != nil {
+		gpuProducts = orch.GPUProducts
+	}
+	affinity := BuildNodeAffinity(PinnedHostnames(placement, group.Nodes, target), target, gpuProducts)
+	tolerations, applyTolerations := JobTolerations(target, unpinned, workload.HasLauncherTarget(&specCopy.Workload))
+
+	dependencyWorkflow := workflow
+	if specCopy.Workload.Inference != nil {
+		dependencyWorkflow = workflow.DeepCopy()
+		if err := platform.ApplyInferencePlacement(dependencyWorkflow.Spec.Dependencies, affinity, tolerations, applyTolerations); err != nil {
+			return fmt.Errorf("failed to place inference servers: %w", err)
+		}
+	}
 
 	// Work out the per-job dependency copies and the spec that references
 	// them, without writing anything yet.
-	prepared, err := prepareJobDependencies(workflow, group, orch, specCopy)
+	prepared, err := prepareJobDependencies(dependencyWorkflow, group, orch, specCopy)
 	if err != nil {
 		return fmt.Errorf("failed to prepare job dependencies for group %s: %w", group.Name, err)
 	}
@@ -1586,21 +1603,11 @@ func (r *WorkflowReconciler) createJobForGroup(ctx context.Context, workflow *nv
 		return fmt.Errorf("failed to get workload adapter: %w", err)
 	}
 
-	placement := workflow.Spec.Orchestration.Placement
-	target := workflow.Spec.Orchestration.Target
-	unpinned := nvcrev1alpha1.IsUnpinned(placement)
-
 	// Pinned jobs get a hostname term for their group. Unpinned jobs get one only
 	// if the target named explicit nodeNames. Both get the target carried onto the
 	// pods, which Pinned never did: the pin masked the gap by landing pods on hosts
 	// the discovery filter had already approved. See ADR-089.
-	var gpuProducts []string
-	if orch != nil {
-		gpuProducts = orch.GPUProducts
-	}
-	if affinity := BuildNodeAffinity(
-		PinnedHostnames(placement, group.Nodes, target), target, gpuProducts,
-	); affinity != nil {
+	if affinity != nil {
 		adapter.SetNodeAffinity(&job.Spec.Workload, affinity)
 	}
 
@@ -1624,9 +1631,7 @@ func (r *WorkflowReconciler) createJobForGroup(ctx context.Context, workflow *nv
 	// leave the launcher unschedulable on the tainted GPU fleets this is meant to
 	// run on, so UnpinnedMPITolerations names the taints the catalog's own runtime
 	// patches already list. See ADR-089.
-	if tolerations, apply := JobTolerations(
-		target, unpinned, workload.HasLauncherTarget(&job.Spec.Workload),
-	); apply {
+	if applyTolerations {
 		adapter.SetTolerations(&job.Spec.Workload, tolerations)
 	}
 

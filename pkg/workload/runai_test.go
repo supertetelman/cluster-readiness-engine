@@ -37,3 +37,17 @@ func TestRunaiPodRejectsUnsupportedFields(t *testing.T) {
 		})
 	}
 }
+
+// Kubernetes stores permissions as an integer; Run:ai requires an octal string.
+func TestRunaiConfigMapDefaultMode(t *testing.T) {
+	const volumeName = "script"
+	mode := int32(0440)
+	pod := &corev1.PodTemplateSpec{Spec: corev1.PodSpec{
+		Containers: []corev1.Container{{Name: "probe", Image: "python", VolumeMounts: []corev1.VolumeMount{{Name: volumeName, MountPath: "/probe", ReadOnly: true}}}},
+		Volumes:    []corev1.Volume{{Name: volumeName, ConfigMap: &corev1.ConfigMapVolumeSource{Name: volumeName, DefaultMode: &mode}}},
+	}}
+	spec, err := RunaiPod(pod)
+	require.NoError(t, err)
+	modeValue := spec["configMapVolumes"].(map[string]any)[runaiItems].(map[string]any)[volumeName].(map[string]any)["value"].(map[string]any)["defaultMode"]
+	require.Equal(t, "0440", modeValue)
+}

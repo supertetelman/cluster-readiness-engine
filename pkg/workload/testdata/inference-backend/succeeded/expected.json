@@ -1,0 +1,38 @@
+{
+  "probe": {
+    "apiVersion": "run.ai/v2alpha1",
+    "kind": "TrainingWorkload",
+    "metadata": {
+      "labels": {
+        "runai/queue": "test-queue"
+      },
+      "name": "probe",
+      "namespace": "test"
+    },
+    "spec": {
+      "backoffLimit": {
+        "value": 0
+      },
+      "command": {
+        "value": "'timeout' '--kill-after=10s' '60' 'python3' 'probe.py'"
+      },
+      "gpuDevices": {
+        "value": 0
+      },
+      "image": {
+        "value": "python:3.12-slim"
+      },
+      "restartPolicy": {
+        "value": "Never"
+      }
+    },
+    "status": {
+      "phase": "Completed"
+    }
+  },
+  "status": {
+    "Phase": "Succeeded",
+    "Reason": "Completed",
+    "Message": ""
+  }
+}

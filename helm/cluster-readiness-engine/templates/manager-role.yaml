@@ -137,5 +137,5 @@ rules:
 
 # Native Run:ai distributed training, read live when selected.
 - apiGroups: [run.ai]
-  resources: [distributedworkloads]
+  resources: [distributedworkloads, trainingworkloads, inferenceworkloads, distributedinferenceworkloads]
   verbs: [get]

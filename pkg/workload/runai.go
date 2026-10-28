@@ -24,7 +24,10 @@ import (
 // Embedding keeps replica counts and source-pod placement shared with Kubernetes.
 type RunaiMPIAdapter struct{ MPIJobAdapter }
 
-const runaiItems = "items"
+const (
+	runaiItems  = "items"
+	runaiValues = "values"
+)
 
 func (*RunaiMPIAdapter) GVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{Group: "run.ai", Version: "v2alpha1", Kind: "DistributedWorkload"}
@@ -76,7 +79,7 @@ func (a *RunaiMPIAdapter) Build(name, namespace string, spec *nvcrev1alpha1.Work
 	if mpi.SSHAuthMountPath != "" {
 		mpiFields["sshAuthMountPath"] = runaiValue(mpi.SSHAuthMountPath)
 	}
-	workerSpec["mpiJob"] = map[string]any{"values": mpiFields}
+	workerSpec["mpiJob"] = map[string]any{runaiValues: mpiFields}
 	policy := map[string]any{}
 	if mpi.RunPolicy.CleanPodPolicy != nil {
 		policy["cleanPodPolicy"] = runaiValue(string(*mpi.RunPolicy.CleanPodPolicy))
@@ -93,11 +96,15 @@ func (a *RunaiMPIAdapter) Build(name, namespace string, spec *nvcrev1alpha1.Work
 	if mpi.RunPolicy.ManagedBy != nil {
 		return nil, fmt.Errorf("native Run:ai MPI does not delegate managedBy")
 	}
-	workerSpec["runPolicy"] = map[string]any{"values": policy}
+	workerSpec["runPolicy"] = map[string]any{runaiValues: policy}
 	return RunaiObject(a.GVK(), name, namespace, workerSpec, map[string]any{"masterSpec": masterSpec})
 }
 
 func (*RunaiMPIAdapter) GetStatus(obj client.Object) (*WorkloadStatus, error) {
+	return runaiStatus(obj)
+}
+
+func runaiStatus(obj client.Object) (*WorkloadStatus, error) {
 	u, ok := obj.(*unstructured.Unstructured)
 	if !ok {
 		return nil, fmt.Errorf("expected native Run:ai workload, got %T", obj)
@@ -206,16 +213,24 @@ func RunaiPod(pod *corev1.PodTemplateSpec) (map[string]any, error) {
 	if len(env) != 0 {
 		s["environment"] = map[string]any{runaiItems: env}
 	}
-	if err := runaiPlacement(s, &pod.Spec); err != nil {
+	if err := ApplyRunaiPlacement(s, &pod.Spec); err != nil {
 		return nil, err
 	}
-	if len(pod.Spec.Volumes) != 0 || len(c.VolumeMounts) != 0 || len(c.Ports) != 0 || c.ReadinessProbe != nil {
-		return nil, fmt.Errorf("this Run:ai adapter cannot translate pod volumes, container ports or readiness probes")
+	if err := runaiVolumes(s, pod); err != nil {
+		return nil, err
 	}
+	if err := runaiReadiness(s, c.ReadinessProbe); err != nil {
+		return nil, err
+	}
+	if len(c.Ports) != 0 {
+		return nil, fmt.Errorf("native Run:ai serving ports must be set by the inference server builder")
+	}
+
 	return s, nil
 }
 
-func runaiPlacement(s map[string]any, pod *corev1.PodSpec) error {
+// ApplyRunaiPlacement applies required node placement and appends target tolerations.
+func ApplyRunaiPlacement(s map[string]any, pod *corev1.PodSpec) error {
 	affinity := &corev1.NodeSelector{}
 	if pod.Affinity != nil {
 		if pod.Affinity.PodAffinity != nil || pod.Affinity.PodAntiAffinity != nil || (pod.Affinity.NodeAffinity != nil && len(pod.Affinity.NodeAffinity.PreferredDuringSchedulingIgnoredDuringExecution) != 0) {
@@ -241,6 +256,12 @@ func runaiPlacement(s map[string]any, pod *corev1.PodSpec) error {
 		s["nodeAffinityRequired"] = affinity
 	}
 	items := map[string]any{}
+	if existing, ok := s["tolerations"].(map[string]any); ok {
+		if values, ok := existing[runaiItems].(map[string]any); ok {
+			maps.Copy(items, values)
+		}
+	}
+	offset := len(items)
 	for i, t := range pod.Tolerations {
 		value := map[string]any{"tolerationKey": t.Key, "operator": string(t.Operator)}
 		if t.Value != "" {
@@ -252,7 +273,7 @@ func runaiPlacement(s map[string]any, pod *corev1.PodSpec) error {
 		if t.TolerationSeconds != nil {
 			value["seconds"] = *t.TolerationSeconds
 		}
-		items[fmt.Sprint(i)] = runaiValue(value)
+		items[fmt.Sprint(offset+i)] = runaiValue(value)
 	}
 	if len(items) != 0 {
 		s["tolerations"] = map[string]any{runaiItems: items}

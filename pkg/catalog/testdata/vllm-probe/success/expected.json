@@ -1,0 +1,15 @@
+{
+  "output": "{\"model\": \"Qwen/Qwen2.5-0.5B-Instruct\", \"status\": \"passed\"}\n",
+  "passed": true,
+  "request": {
+    "max_tokens": 32,
+    "messages": [
+      {
+        "content": "What is 2 + 2?",
+        "role": "user"
+      }
+    ],
+    "model": "Qwen/Qwen2.5-0.5B-Instruct",
+    "temperature": 0
+  }
+}

@@ -1,0 +1,13 @@
+waitFor:
+  kind: Job
+  name: test-inference-runai
+  namespace: default
+  condition: InProgress
+  reason: WorkloadPending
+collect:
+  - kind: Job
+    name: test-inference-runai
+    namespace: default
+  - kind: TrainingWorkload
+    name: test-inference-runai-workload
+    namespace: default

@@ -16,6 +16,9 @@ func ApplySchedulingBackend(spec *nvcrev1alpha1.WorkflowSpec, backend *nvcrev1al
 	if backend == nil {
 		return nil
 	}
+	if err := workload.ValidateBackendSupport(&spec.JobTemplate.Spec.Workload, backend); err != nil {
+		return err
+	}
 	gs, err := workload.BackendScheduler(backend)
 	if err != nil {
 		return err
@@ -41,6 +44,11 @@ func ApplySchedulingBackend(spec *nvcrev1alpha1.WorkflowSpec, backend *nvcrev1al
 	labels, err := workload.InsertConsistentLabel(workload.LabelsOf(spec.JobTemplate.Spec.WorkloadMetadata), gs.QueueLabelKey, gs.Queue, JobTemplateWorkloadLabelsPath)
 	if err != nil {
 		return err
+	}
+	if spec.JobTemplate.Spec.Workload.Inference != nil {
+		if err := applyInferenceScheduling(spec.Dependencies, gs); err != nil {
+			return err
+		}
 	}
 	spec.JobTemplate.Spec.WorkloadMetadata = workload.MetadataFrom(labels)
 	return nil

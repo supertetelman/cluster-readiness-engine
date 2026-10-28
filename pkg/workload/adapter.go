@@ -88,14 +88,30 @@ func ForBackend(spec *nvcrev1alpha1.WorkloadSpec, backend *nvcrev1alpha1.Schedul
 	if spec.MPIJob != nil {
 		return &RunaiMPIAdapter{}, nil
 	}
+	if spec.Inference != nil {
+		return &RunaiProbeAdapter{}, nil
+	}
 	return nil, fmt.Errorf("native Run:ai training requires mpiJob; TrainJob uses Kubernetes or Slinky")
 }
 
 // ForSpec selects the adapter for the shared payload, before backend submission.
 func ForSpec(spec *nvcrev1alpha1.WorkloadSpec) (Adapter, error) {
-	switch {
-	case spec.MPIJob != nil && spec.TrainJob != nil:
+	count := 0
+	if spec.TrainJob != nil {
+		count++
+	}
+	if spec.MPIJob != nil {
+		count++
+	}
+	if spec.Inference != nil {
+		count++
+	}
+	if count > 1 {
 		return nil, fmt.Errorf("exactly one workload type must be specified")
+	}
+	switch {
+	case spec.Inference != nil:
+		return &InferenceAdapter{}, nil
 	case spec.MPIJob != nil:
 		return &MPIJobAdapter{}, nil
 	case spec.TrainJob != nil:

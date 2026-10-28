@@ -1,0 +1,8 @@
+{
+  "deleted": true,
+  "deletionPropagation": "Background",
+  "kind": "Job",
+  "outcome": "Failed",
+  "pendingReason": "WorkloadPending",
+  "status": "True"
+}

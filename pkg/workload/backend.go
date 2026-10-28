@@ -34,6 +34,14 @@ func BackendScheduler(backend *nvcrev1alpha1.SchedulingBackend) (*nvcrev1alpha1.
 	}
 }
 
+// ValidateBackendSupport rejects unsupported platform/workload combinations before creation.
+func ValidateBackendSupport(spec *nvcrev1alpha1.WorkloadSpec, backend *nvcrev1alpha1.SchedulingBackend) error {
+	if backend != nil && backend.Name == "slinky" && spec.Inference != nil {
+		return fmt.Errorf("inference is unsupported on Slinky; Slinky is training-only")
+	}
+	return nil
+}
+
 // ApplyBackend adds project routing to a native Run:ai workload.
 func ApplyBackend(obj client.Object, backend *nvcrev1alpha1.SchedulingBackend) error {
 	gs, err := BackendScheduler(backend)
@@ -44,8 +52,8 @@ func ApplyBackend(obj client.Object, backend *nvcrev1alpha1.SchedulingBackend) e
 		return nil
 	}
 	native, ok := obj.(*unstructured.Unstructured)
-	if !ok || native.GroupVersionKind() != (&RunaiMPIAdapter{}).GVK() {
-		return fmt.Errorf("runai backend requires a native DistributedWorkload, not scheduler routing on %T", obj)
+	if !ok || (native.GroupVersionKind() != (&RunaiMPIAdapter{}).GVK() && native.GroupVersionKind() != (&RunaiProbeAdapter{}).GVK()) {
+		return fmt.Errorf("runai backend requires a native Run:ai workload, not scheduler routing on %T", obj)
 	}
 	labels, err := InsertConsistentLabel(obj.GetLabels(), gs.QueueLabelKey, gs.Queue, "spec.backend.queue")
 	if err != nil {

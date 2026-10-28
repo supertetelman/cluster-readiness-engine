@@ -1,0 +1,2 @@
+variant: vllm-single
+backend: {name: runai, queue: test-queue}

@@ -26,6 +26,14 @@
       "variant": "dcgm-level4"
     },
     {
+      "domain": "inference",
+      "variant": "vllm-distributed"
+    },
+    {
+      "domain": "inference",
+      "variant": "vllm-single"
+    },
+    {
       "domain": "training",
       "variant": "nemotron5-56b"
     },
