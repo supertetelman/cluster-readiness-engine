@@ -1,0 +1,5 @@
+backend: {name: runai, queue: test-queue}
+workflow:
+  gangScheduler:
+    schedulerName: another-scheduler
+    queue: another-queue

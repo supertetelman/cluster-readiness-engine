@@ -23,6 +23,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	trainerv1alpha1 "github.com/kubeflow/trainer/v2/pkg/apis/trainer/v1alpha1"
 
 	nvcrev1alpha1 "github.com/NVIDIA/cluster-readiness-engine/api/v1alpha1"
@@ -352,6 +353,7 @@ func NewK8sClient(cf *kubeconfig.ConfigFlags) (client.Client, error) {
 	_ = clientgoscheme.AddToScheme(s)
 	_ = nvcrev1alpha1.AddToScheme(s)
 	_ = trainerv1alpha1.AddToScheme(s)
+	_ = mpiv2beta1.AddToScheme(s)
 
 	return client.New(restConfig, client.Options{Scheme: s})
 }
@@ -368,6 +370,7 @@ func NewK8sWatchClient(cf *kubeconfig.ConfigFlags) (client.WithWatch, error) {
 	_ = clientgoscheme.AddToScheme(s)
 	_ = nvcrev1alpha1.AddToScheme(s)
 	_ = trainerv1alpha1.AddToScheme(s)
+	_ = mpiv2beta1.AddToScheme(s)
 
 	return client.NewWithWatch(restConfig, client.Options{Scheme: s})
 }
@@ -406,7 +409,7 @@ func DryRunCreate(ctx context.Context, c client.Client, namespace string,
 	}
 
 	// Get the workload adapter.
-	adapter, err := workload.ForSpec(&specCopy.Workload)
+	adapter, err := workload.ForBackend(&specCopy.Workload, specCopy.Backend)
 	if err != nil {
 		return nil, fmt.Errorf("resolve workload type: %w", err)
 	}
@@ -530,7 +533,7 @@ func DryRunCreate(ctx context.Context, c client.Client, namespace string,
 
 	// --- 3. Validate workload ---
 	wlObj, err := workload.BuildObject(
-		adapter, "dry-run-workload", namespace, &specCopy.Workload, specCopy.WorkloadMetadata)
+		adapter, "dry-run-workload", namespace, &specCopy.Workload, specCopy.WorkloadMetadata, specCopy.Backend)
 	if err != nil {
 		results = append(results, DryRunResult{
 			Resource: fmt.Sprintf("%s/dry-run-workload", adapter.GVK().Kind),

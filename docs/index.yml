@@ -35,6 +35,8 @@ navigation:
 
   - section: How-to Guides
     contents:
+      - page: Scheduling Backends
+        path: how-to-guides/scheduling-backends.md
       - page: Certify a Cluster
         path: how-to-guides/certify-a-cluster.md
       - page: Run NVCRE Locally Without GPUs

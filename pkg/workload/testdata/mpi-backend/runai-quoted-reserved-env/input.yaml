@@ -1,0 +1,37 @@
+job:
+  backend:
+    name: runai
+    queue: test-queue
+  workload:
+    mpiJob:
+      slotsPerWorker: 1
+      runPolicy:
+        cleanPodPolicy: None
+      mpiReplicaSpecs:
+        Launcher:
+          replicas: 1
+          restartPolicy: Never
+          template:
+            spec:
+              containers:
+                - name: launcher
+                  image: shared-mpi-test
+                  command: [sh, -ec]
+                  env: [{name: NVCRE_ARGUMENTS_0, value: user-value}]
+                  args:
+                    - |
+                      echo 'value'
+        Worker:
+          replicas: 2
+          restartPolicy: Never
+          template:
+            spec:
+              containers:
+                - name: worker
+                  image: shared-mpi-test
+                  command: [/usr/sbin/sshd, -De]
+status:
+  conditions:
+    - type: Running
+      status: "True"
+      reason: TestCondition

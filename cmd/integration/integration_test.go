@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	trainerv1alpha1 "github.com/kubeflow/trainer/v2/pkg/apis/trainer/v1alpha1"
 	"github.com/stretchr/testify/require"
 
@@ -46,6 +47,7 @@ import (
 	sigyaml "sigs.k8s.io/yaml"
 
 	"github.com/NVIDIA/cluster-readiness-engine/pkg/testutil"
+	"github.com/NVIDIA/cluster-readiness-engine/pkg/workload"
 
 	nvcrev1alpha1 "github.com/NVIDIA/cluster-readiness-engine/api/v1alpha1"
 	_ "github.com/NVIDIA/cluster-readiness-engine/pkg/catalog"
@@ -64,6 +66,7 @@ const kindJob = "Job"
 func init() {
 	_ = nvcrev1alpha1.AddToScheme(scheme.Scheme)
 	_ = trainerv1alpha1.AddToScheme(scheme.Scheme)
+	_ = mpiv2beta1.AddToScheme(scheme.Scheme)
 }
 
 func TestIntegration(t *testing.T) {
@@ -1454,6 +1457,10 @@ func objectForKind(kind string) (client.Object, bool, error) {
 		return &nvcrev1alpha1.LogProfile{}, false, nil
 	case "Namespace":
 		return &corev1.Namespace{}, false, nil
+	case "DistributedWorkload":
+		return (&workload.RunaiMPIAdapter{}).NewObject(), true, nil
+	case "MPIJob":
+		return &mpiv2beta1.MPIJob{}, true, nil
 	case "TrainJob":
 		return &trainerv1alpha1.TrainJob{}, true, nil
 	case "TrainingRuntime":

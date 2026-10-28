@@ -76,9 +76,28 @@ type Adapter interface {
 	GetStatus(obj client.Object) (*WorkloadStatus, error)
 }
 
-// ForSpec returns the appropriate Adapter for the given WorkloadSpec.
+// ForBackend selects the submission adapter. The payload remains in WorkloadSpec.
+func ForBackend(spec *nvcrev1alpha1.WorkloadSpec, backend *nvcrev1alpha1.SchedulingBackend) (Adapter, error) {
+	adapter, err := ForSpec(spec)
+	if err != nil {
+		return nil, err
+	}
+	if backend == nil || backend.Name != "runai" {
+		return adapter, nil
+	}
+	if spec.MPIJob != nil {
+		return &RunaiMPIAdapter{}, nil
+	}
+	return nil, fmt.Errorf("native Run:ai training requires mpiJob; TrainJob uses Kubernetes or Slinky")
+}
+
+// ForSpec selects the adapter for the shared payload, before backend submission.
 func ForSpec(spec *nvcrev1alpha1.WorkloadSpec) (Adapter, error) {
 	switch {
+	case spec.MPIJob != nil && spec.TrainJob != nil:
+		return nil, fmt.Errorf("exactly one workload type must be specified")
+	case spec.MPIJob != nil:
+		return &MPIJobAdapter{}, nil
 	case spec.TrainJob != nil:
 		return &TrainJobAdapter{}, nil
 	default:

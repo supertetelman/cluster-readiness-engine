@@ -1,0 +1,26 @@
+job:
+  backend: {name: unknown}
+  workload:
+    mpiJob:
+      slotsPerWorker: 1
+      runPolicy:
+        cleanPodPolicy: None
+      mpiReplicaSpecs:
+        Launcher:
+          replicas: 1
+          restartPolicy: Never
+          template:
+            spec:
+              containers:
+                - name: launcher
+                  image: shared-mpi-test
+                  command: [mpirun, -np, '2', /usr/local/bin/all_reduce_perf_mpi]
+        Worker:
+          replicas: 2
+          restartPolicy: Never
+          template:
+            spec:
+              containers:
+                - name: worker
+                  image: shared-mpi-test
+                  command: [/usr/sbin/sshd, -De]

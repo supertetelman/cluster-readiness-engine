@@ -1,0 +1,93 @@
+{
+  "nodes": 2,
+  "status": {
+    "Phase": "Pending",
+    "Reason": "",
+    "Message": ""
+  },
+  "workload": {
+    "kind": "MPIJob",
+    "apiVersion": "kubeflow.org/v2beta1",
+    "metadata": {
+      "name": "test-workload",
+      "namespace": "test"
+    },
+    "spec": {
+      "slotsPerWorker": 1,
+      "runPolicy": {
+        "cleanPodPolicy": "None"
+      },
+      "mpiReplicaSpecs": {
+        "Launcher": {
+          "replicas": 1,
+          "template": {
+            "metadata": {
+              "labels": {
+                "nvcre.nvidia.com/launcher": "test"
+              }
+            },
+            "spec": {
+              "containers": [
+                {
+                  "name": "launcher",
+                  "image": "shared-mpi-test",
+                  "command": [
+                    "mpirun",
+                    "-np",
+                    "2",
+                    "/usr/local/bin/all_reduce_perf_mpi"
+                  ],
+                  "resources": {}
+                }
+              ],
+              "nodeSelector": {
+                "pool": "gpu"
+              },
+              "tolerations": [
+                {
+                  "key": "nvidia.com/gpu",
+                  "operator": "Exists"
+                }
+              ]
+            }
+          },
+          "restartPolicy": "Never"
+        },
+        "Worker": {
+          "replicas": 2,
+          "template": {
+            "metadata": {
+              "labels": {
+                "nvcre.nvidia.com/job": "test"
+              }
+            },
+            "spec": {
+              "containers": [
+                {
+                  "name": "worker",
+                  "image": "shared-mpi-test",
+                  "command": [
+                    "/usr/sbin/sshd",
+                    "-De"
+                  ],
+                  "resources": {}
+                }
+              ],
+              "nodeSelector": {
+                "pool": "gpu"
+              },
+              "tolerations": [
+                {
+                  "key": "nvidia.com/gpu",
+                  "operator": "Exists"
+                }
+              ]
+            }
+          },
+          "restartPolicy": "Never"
+        }
+      }
+    },
+    "status": {}
+  }
+}

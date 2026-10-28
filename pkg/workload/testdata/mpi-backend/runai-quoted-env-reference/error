@@ -1,0 +1,1 @@
+native Run:ai complex arguments cannot reference container environment with $(...); use shell $VAR references where appropriate

@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/evanphx/json-patch/v5 v5.9.11
 	github.com/google/cel-go v0.31.0
+	github.com/kubeflow/mpi-operator v0.6.0
 	github.com/kubeflow/trainer/v2 v2.2.1
 	github.com/modelcontextprotocol/go-sdk v1.8.0
 	github.com/prometheus/client_golang v1.25.0

@@ -1,0 +1,182 @@
+{
+  "Job/test-mpi-native": {
+    "kind": "Job",
+    "apiVersion": "nvcre.nvidia.com/v1alpha1",
+    "metadata": {
+      "name": "test-mpi-native",
+      "namespace": "default",
+      "finalizers": [
+        "nvcre.nvidia.com/finalizer"
+      ]
+    },
+    "spec": {
+      "workload": {
+        "mpiJob": {
+          "slotsPerWorker": 1,
+          "runPolicy": {
+            "cleanPodPolicy": "None"
+          },
+          "mpiReplicaSpecs": {
+            "Launcher": {
+              "replicas": 1,
+              "template": {
+                "metadata": {},
+                "spec": {
+                  "containers": [
+                    {
+                      "name": "launcher",
+                      "image": "shared-mpi-test",
+                      "command": [
+                        "mpirun",
+                        "-np",
+                        "2",
+                        "/usr/local/bin/all_reduce_perf_mpi"
+                      ],
+                      "resources": {}
+                    }
+                  ]
+                }
+              },
+              "restartPolicy": "Never"
+            },
+            "Worker": {
+              "replicas": 2,
+              "template": {
+                "metadata": {},
+                "spec": {
+                  "containers": [
+                    {
+                      "name": "worker",
+                      "image": "shared-mpi-test",
+                      "command": [
+                        "/usr/sbin/sshd",
+                        "-De"
+                      ],
+                      "resources": {}
+                    }
+                  ]
+                }
+              },
+              "restartPolicy": "Never"
+            }
+          }
+        }
+      }
+    },
+    "status": {
+      "conditions": [
+        {
+          "type": "InProgress",
+          "status": "True",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "WorkloadPending",
+          "message": "Workload MPIJob/test-mpi-native-workload is pending"
+        },
+        {
+          "type": "Succeeded",
+          "status": "False",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "NotApplicable",
+          "message": ""
+        },
+        {
+          "type": "Failed",
+          "status": "False",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "NotApplicable",
+          "message": ""
+        }
+      ],
+      "workloadRef": {
+        "apiVersion": "kubeflow.org/v2beta1",
+        "kind": "MPIJob",
+        "name": "test-mpi-native-workload",
+        "namespace": "default"
+      }
+    }
+  },
+  "MPIJob/test-mpi-native-workload": {
+    "kind": "MPIJob",
+    "apiVersion": "kubeflow.org/v2beta1",
+    "metadata": {
+      "name": "test-mpi-native-workload",
+      "namespace": "default",
+      "labels": {
+        "app.kubernetes.io/managed-by": "nvcre",
+        "nvcre.nvidia.com/job": "test-mpi-native"
+      },
+      "ownerReferences": [
+        {
+          "apiVersion": "nvcre.nvidia.com/v1alpha1",
+          "kind": "Job",
+          "name": "test-mpi-native",
+          "uid": "",
+          "controller": true,
+          "blockOwnerDeletion": true
+        }
+      ]
+    },
+    "spec": {
+      "slotsPerWorker": 1,
+      "runPolicy": {
+        "cleanPodPolicy": "None"
+      },
+      "mpiReplicaSpecs": {
+        "Launcher": {
+          "replicas": 1,
+          "template": {
+            "metadata": {
+              "labels": {
+                "nvcre.nvidia.com/launcher": "test-mpi-native"
+              }
+            },
+            "spec": {
+              "containers": [
+                {
+                  "name": "launcher",
+                  "image": "shared-mpi-test",
+                  "command": [
+                    "mpirun",
+                    "-np",
+                    "2",
+                    "/usr/local/bin/all_reduce_perf_mpi"
+                  ],
+                  "resources": {}
+                }
+              ]
+            }
+          },
+          "restartPolicy": "Never"
+        },
+        "Worker": {
+          "replicas": 2,
+          "template": {
+            "metadata": {
+              "labels": {
+                "nvcre.nvidia.com/job": "test-mpi-native"
+              }
+            },
+            "spec": {
+              "containers": [
+                {
+                  "name": "worker",
+                  "image": "shared-mpi-test",
+                  "command": [
+                    "/usr/sbin/sshd",
+                    "-De"
+                  ],
+                  "resources": {}
+                }
+              ]
+            }
+          },
+          "restartPolicy": "Never"
+        }
+      }
+    },
+    "status": {}
+  }
+}

@@ -125,3 +125,17 @@ rules:
   - trainjobs/status
   verbs:
   - get
+
+- apiGroups:
+  - kubeflow.org
+  resources:
+  - mpijobs
+  verbs:
+  - get
+  - list
+  - watch
+
+# Native Run:ai distributed training, read live when selected.
+- apiGroups: [run.ai]
+  resources: [distributedworkloads]
+  verbs: [get]

@@ -1,0 +1,7 @@
+{
+  "deleted": true,
+  "kind": "DistributedWorkload",
+  "outcome": "Succeeded",
+  "pendingReason": "WorkloadPending",
+  "status": "True"
+}

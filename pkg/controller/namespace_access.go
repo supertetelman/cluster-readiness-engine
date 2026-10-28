@@ -235,7 +235,11 @@ func requiredNamespaceAccess(workflow *nvcrev1alpha1.Workflow, mapper meta.RESTM
 	}
 
 	add(workflow.Namespace, "", resourceConfigMaps, "", nodeResultsConfigMapVerbs...)
-	add(workflow.Namespace, "trainer.kubeflow.org", "trainjobs", "", trainJobVerbs...)
+	if workflow.Spec.JobTemplate.Spec.Workload.MPIJob != nil {
+		add(workflow.Namespace, "kubeflow.org", "mpijobs", "", trainJobVerbs...)
+	} else {
+		add(workflow.Namespace, "trainer.kubeflow.org", "trainjobs", "", trainJobVerbs...)
+	}
 	add(workflow.Namespace, "", "pods", "log", verbGet)
 
 	for _, dep := range workflow.Spec.Dependencies {

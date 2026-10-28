@@ -161,6 +161,14 @@ func (r *JobReconciler) workloadReader() client.Reader {
 	return r.Client
 }
 
+// MPIJob is optional and is polled without starting a cluster-wide informer.
+func (r *JobReconciler) readerForWorkload(job *nvcrev1alpha1.Job) client.Reader {
+	if job.Spec.Workload.MPIJob != nil {
+		return r.workloadReader()
+	}
+	return r.Client
+}
+
 // getWorkloadRequeueInterval returns the effective requeue interval for workload status polling.
 func (r *JobReconciler) getWorkloadRequeueInterval() time.Duration {
 	if r.WorkloadRequeueInterval > 0 {
@@ -202,6 +210,7 @@ func measurementTimeoutFor(job *nvcrev1alpha1.Job, configured time.Duration) tim
 // TrainJob reads stay in nvcre-manager-role, cluster-wide, because Owns()
 // watches them across all namespaces. Writes are in nvcre-run-role, granted
 // per run namespace (ADR-092).
+// +kubebuilder:rbac:groups=kubeflow.org,resources=mpijobs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=trainer.kubeflow.org,resources=trainjobs,verbs=get;list;watch
 // +kubebuilder:rbac:groups=trainer.kubeflow.org,resources=trainjobs/status,verbs=get
 // +kubebuilder:rbac:groups=trainer.kubeflow.org,resources=trainjobs,verbs=create;update;patch;delete
@@ -338,7 +347,7 @@ func (r *JobReconciler) deleteWorkloadByRef(ctx context.Context, job *nvcrev1alp
 		return nil
 	}
 
-	adapter, err := workload.ForSpec(&job.Spec.Workload)
+	adapter, err := workload.ForBackend(&job.Spec.Workload, job.Spec.Backend)
 	if err != nil {
 		logf.FromContext(ctx).Error(err, "Failed to resolve workload adapter")
 		return nil // non-fatal: adapter mismatch shouldn't block cleanup
@@ -350,7 +359,7 @@ func (r *JobReconciler) deleteWorkloadByRef(ctx context.Context, job *nvcrev1alp
 		ns = job.Namespace
 	}
 
-	if err := r.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, obj); apierrors.IsNotFound(err) {
+	if err := r.readerForWorkload(job).Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, obj); apierrors.IsNotFound(err) {
 		return nil
 	} else if err != nil {
 		return fmt.Errorf("failed to get workload %s/%s: %w", ref.Kind, ref.Name, err)
@@ -428,7 +437,7 @@ func (r *JobReconciler) reconcileWorkload(ctx context.Context, job *nvcrev1alpha
 func (r *JobReconciler) createWorkloadFromSpec(ctx context.Context, job *nvcrev1alpha1.Job) (ctrl.Result, error) {
 	log := logf.FromContext(ctx)
 
-	adapter, err := workload.ForSpec(&job.Spec.Workload)
+	adapter, err := workload.ForBackend(&job.Spec.Workload, job.Spec.Backend)
 	if err != nil {
 		if statusErr := r.setJobFailed(ctx, job, ReasonWorkloadCreationError,
 			fmt.Sprintf("Unsupported workload type: %v", err)); statusErr != nil {
@@ -447,7 +456,7 @@ func (r *JobReconciler) createWorkloadFromSpec(ctx context.Context, job *nvcrev1
 
 	workloadName := r.getWorkloadName(job)
 	obj, err := workload.BuildObject(
-		adapter, workloadName, job.Namespace, specCopy, job.Spec.WorkloadMetadata)
+		adapter, workloadName, job.Namespace, specCopy, job.Spec.WorkloadMetadata, job.Spec.Backend)
 	if err != nil {
 		if statusErr := r.setJobFailed(ctx, job, ReasonWorkloadCreationError,
 			fmt.Sprintf("Failed to build workload: %v", err)); statusErr != nil {
@@ -779,7 +788,7 @@ func (r *JobReconciler) updateStatusFromWorkload(ctx context.Context, job *nvcre
 	log := logf.FromContext(ctx)
 	ref := job.Status.WorkloadRef
 
-	adapter, err := workload.ForSpec(&job.Spec.Workload)
+	adapter, err := workload.ForBackend(&job.Spec.Workload, job.Spec.Backend)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to resolve workload adapter: %w", err)
 	}
@@ -790,7 +799,7 @@ func (r *JobReconciler) updateStatusFromWorkload(ctx context.Context, job *nvcre
 		ns = job.Namespace
 	}
 
-	if err := r.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, obj); err != nil {
+	if err := r.readerForWorkload(job).Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, obj); err != nil {
 		if apierrors.IsNotFound(err) {
 			return r.handleWorkloadNotFound(ctx, job, ref, adapter, ns)
 		}
@@ -1432,7 +1441,7 @@ func (r *JobReconciler) restartFromCheckpoint(ctx context.Context, job *nvcrev1a
 	if ns == "" {
 		ns = job.Namespace
 	}
-	if err := r.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, obj); err == nil {
+	if err := r.readerForWorkload(job).Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, obj); err == nil {
 		if err := r.Delete(ctx, obj); err != nil && !apierrors.IsNotFound(err) {
 			return ctrl.Result{}, fmt.Errorf("failed to delete workload for restart: %w", err)
 		}
@@ -1680,7 +1689,7 @@ func (r *JobReconciler) launcherPods(ctx context.Context, job *nvcrev1alpha1.Job
 	if ns == "" {
 		ns = job.Namespace
 	}
-	launchers, err := newPodReader(r.Client, r.APIReader).WorkloadPods(ctx, ns, ref.Name, workload.LauncherJobName)
+	launchers, err := newPodReader(r.Client, r.APIReader).WorkloadPods(ctx, ns, ref.Name, workload.LauncherJobName, ref.Kind)
 	if err != nil {
 		return nil, err
 	}
@@ -1694,12 +1703,12 @@ func (r *JobReconciler) launcherPods(ctx context.Context, job *nvcrev1alpha1.Job
 		return nil, nil
 	}
 
-	adapter, err := workload.ForSpec(&job.Spec.Workload)
+	adapter, err := workload.ForBackend(&job.Spec.Workload, job.Spec.Backend)
 	if err != nil {
 		return nil, err
 	}
 	current := adapter.NewObject()
-	if err := r.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, current); err != nil {
+	if err := r.readerForWorkload(job).Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, current); err != nil {
 		if apierrors.IsNotFound(err) {
 			return counted, nil
 		}

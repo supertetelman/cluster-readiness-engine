@@ -39,6 +39,28 @@ spec:
           spec:
             description: spec defines the desired state of Job
             properties:
+              backend:
+                description: backend selects the workload scheduling backend.
+                properties:
+                  name:
+                    description: |-
+                      name selects the submission platform. Run:ai creates native Run:ai workload CRDs.
+                      Omitted backend preserves existing Kubernetes behavior.
+                    enum:
+                    - kubernetes
+                    - runai
+                    type: string
+                  queue:
+                    description: queue names an existing Run:ai queue. Required for
+                      Run:ai.
+                    maxLength: 63
+                    type: string
+                required:
+                - name
+                type: object
+                x-kubernetes-validations:
+                - message: backend is immutable
+                  rule: self == oldSelf
               bandwidthMeasurement:
                 description: |-
                   bandwidthMeasurement configures automatic creation of a BandwidthMeasurement
@@ -215,6 +237,13 @@ spec:
                 maxProperties: 1
                 minProperties: 1
                 properties:
+                  mpiJob:
+                    description: |-
+                      mpiJob configures a Kubeflow MPI Operator v2beta1 workload.
+                      The MPI Operator validates its spec. Preserve it here instead of
+                      duplicating two complete Pod schemas in every NVCRE CRD and Helm release.
+                    type: object
+                    x-kubernetes-preserve-unknown-fields: true
                   trainJob:
                     description: trainJob configures a Kubeflow TrainJob workload.
                     properties:
@@ -6453,6 +6482,8 @@ spec:
             - workload
             type: object
             x-kubernetes-validations:
+            - message: backend cannot be added or removed after creation
+              rule: has(self.backend) == has(oldSelf.backend)
             - message: workloadMetadata cannot be added or removed after creation
               rule: has(self.workloadMetadata) == has(oldSelf.workloadMetadata)
             - message: nodeHealthMonitor cannot be added or removed after creation

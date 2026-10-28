@@ -44,6 +44,25 @@ spec:
               silently ignore them or apply them only to later categories. To run with
               different inputs, delete the Certification and create a new one.
             properties:
+              backend:
+                description: backend selects the workload scheduling backend.
+                properties:
+                  name:
+                    description: |-
+                      name selects the submission platform. Run:ai creates native Run:ai workload CRDs.
+                      Omitted backend preserves existing Kubernetes behavior.
+                    enum:
+                    - kubernetes
+                    - runai
+                    type: string
+                  queue:
+                    description: queue names an existing Run:ai queue. Required for
+                      Run:ai.
+                    maxLength: 63
+                    type: string
+                required:
+                - name
+                type: object
               categories:
                 description: |-
                   Categories are the list of certificate categories required for the Target.
@@ -61,6 +80,25 @@ spec:
                         options provides per-category configuration overrides.
                         Fields set here take precedence over their CertificationSpec counterparts.
                       properties:
+                        backend:
+                          description: backend selects the workload scheduling backend.
+                          properties:
+                            name:
+                              description: |-
+                                name selects the submission platform. Run:ai creates native Run:ai workload CRDs.
+                                Omitted backend preserves existing Kubernetes behavior.
+                              enum:
+                              - kubernetes
+                              - runai
+                              type: string
+                            queue:
+                              description: queue names an existing Run:ai queue. Required
+                                for Run:ai.
+                              maxLength: 63
+                              type: string
+                          required:
+                          - name
+                          type: object
                         dcgmHost:
                           description: |-
                             dcgmHost is the DCGM hostengine address the diagnostics/dcgm-level4

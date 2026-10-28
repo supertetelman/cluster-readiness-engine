@@ -344,6 +344,7 @@ func applyWorkflowTransforms(
 	opts := controller.ResolveOptions(&cert.Spec.CategoryOptions, cert.Spec.Categories[i].Options)
 	if err := platform.ApplyResolvedWorkflowTransforms(
 		&workflows[i].Spec, platform.ResolvedWorkflowTransforms{
+			Backend:            opts.Backend,
 			GangScheduler:      cert.Spec.GangScheduler,
 			Image:              opts.Image,
 			WorkloadLabels:     workload.LabelsOf(opts.WorkloadMetadata),

@@ -34,8 +34,8 @@ func NewWorkerDiscoverer(pods *podread.Reader) *WorkerDiscoverer {
 // The lastWorker may be nil if the workload is single-worker or replica count is 1.
 func (d *WorkerDiscoverer) GetWorkerPods(ctx context.Context, namespace, name, workloadKind string) (worker0 *corev1.Pod, lastWorker *corev1.Pod, err error) {
 	switch workloadKind {
-	case "TrainJob":
-		return d.getTrainJobWorkerPods(ctx, namespace, name)
+	case "TrainJob", "MPIJob", "DistributedWorkload":
+		return d.getWorkloadWorkerPods(ctx, namespace, name, workloadKind)
 	default:
 		return nil, nil, fmt.Errorf("unsupported workload kind: %s", workloadKind)
 	}
@@ -44,8 +44,8 @@ func (d *WorkerDiscoverer) GetWorkerPods(ctx context.Context, namespace, name, w
 // GetReplicatedJobPod returns the first pod of a replicatedJob within a TrainJob's JobSet, in the
 // order defined by replicatedJobPodLess, so repeated calls pick the same pod.
 // replicatedJobName is "launcher" for MPI workloads or "node" for torch workloads.
-func (d *WorkerDiscoverer) GetReplicatedJobPod(ctx context.Context, namespace, workloadName, replicatedJobName string) (*corev1.Pod, error) {
-	pods, err := d.pods.WorkloadPods(ctx, namespace, workloadName, replicatedJobName)
+func (d *WorkerDiscoverer) GetReplicatedJobPod(ctx context.Context, namespace, workloadName, replicatedJobName string, kinds ...string) (*corev1.Pod, error) {
+	pods, err := d.pods.WorkloadPods(ctx, namespace, workloadName, replicatedJobName, kinds...)
 	if err != nil {
 		return nil, fmt.Errorf("listing pods for %s/%s replicatedJob %s: %w", namespace, workloadName, replicatedJobName, err)
 	}
@@ -111,9 +111,13 @@ func labelInt(pod *corev1.Pod, key string) int {
 // getTrainJobWorkerPods discovers worker pods for a Kubeflow TrainJob.
 // TrainJob creates a JobSet, which creates batch Jobs, which create pods.
 // Workers are identified by the batch.kubernetes.io/job-completion-index label.
-func (d *WorkerDiscoverer) getTrainJobWorkerPods(ctx context.Context, namespace, name string) (*corev1.Pod, *corev1.Pod, error) {
+func (d *WorkerDiscoverer) getWorkloadWorkerPods(ctx context.Context, namespace, name, kind string) (*corev1.Pod, *corev1.Pod, error) {
 	// Every pod JobSet labelled with the TrainJob's name.
-	pods, err := d.pods.WorkloadPods(ctx, namespace, name, "")
+	role := ""
+	if kind == "MPIJob" || kind == "DistributedWorkload" {
+		role = "worker"
+	}
+	pods, err := d.pods.WorkloadPods(ctx, namespace, name, role, kind)
 	if err != nil {
 		return nil, nil, fmt.Errorf("listing pods for TrainJob %s: %w", name, err)
 	}
@@ -141,6 +145,9 @@ func (d *WorkerDiscoverer) getTrainJobWorkerPods(ctx context.Context, namespace,
 // getCompletionIndex extracts the batch job completion index from a pod's labels.
 func getCompletionIndex(pod *corev1.Pod) int {
 	idxStr, ok := pod.Labels["batch.kubernetes.io/job-completion-index"]
+	if !ok {
+		idxStr, ok = pod.Labels["training.kubeflow.org/replica-index"]
+	}
 	if !ok {
 		return 0
 	}

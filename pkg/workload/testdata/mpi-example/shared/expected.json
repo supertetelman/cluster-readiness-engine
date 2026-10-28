@@ -1,0 +1,19 @@
+{
+  "backend": {
+    "name": "kubernetes"
+  },
+  "nodes": 2,
+  "orchestration": {
+    "target": {
+      "nodeSelector": {
+        "nvidia.com/gpu.present": "true"
+      }
+    },
+    "placement": "Unpinned",
+    "execution": {
+      "maxConcurrent": 1,
+      "timeoutPerJob": "20m0s"
+    },
+    "iterations": 1
+  }
+}

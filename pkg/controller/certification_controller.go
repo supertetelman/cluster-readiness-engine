@@ -647,6 +647,7 @@ func (r *CertificationReconciler) createWorkflowForCategory(ctx context.Context,
 	// gang-scheduling intent on the Workflow and checks the effective
 	// manifests against it.
 	if err := platform.ApplyResolvedWorkflowTransforms(&workflowSpec, platform.ResolvedWorkflowTransforms{
+		Backend:            opts.Backend,
 		GangScheduler:      certification.Spec.GangScheduler,
 		Image:              opts.Image,
 		WorkloadLabels:     workload.LabelsOf(opts.WorkloadMetadata),
@@ -841,6 +842,9 @@ func ResolveOptions(global *nvcrev1alpha1.CategoryOptions, override *nvcrev1alph
 	resolved.Env = resolveEnv(global, override)
 	if override == nil {
 		return resolved
+	}
+	if override.Backend != nil {
+		resolved.Backend = override.Backend.DeepCopy()
 	}
 	if override.NodesPerJob != nil {
 		resolved.NodesPerJob = override.NodesPerJob

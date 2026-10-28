@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Change only spec.backend to run this same MPI workload on another scheduler.
+apiVersion: nvcre.nvidia.com/v1alpha1
+kind: WorkloadRun
+metadata:
+  name: mpi-nccl-all-reduce
+spec:
+  image: nvcr.io/nvidia/pytorch:26.01-py3
+  backend:
+    name: kubernetes
+  numNodes: 2
+  gpusPerNode: 1
+  target:
+    nodeSelector:
+      nvidia.com/gpu.present: "true"
+  env:
+    - {name: NCCL_IB_DISABLE, value: "1"}
+    - {name: NCCL_NET, value: Socket}
+    - {name: NCCL_NET_PLUGIN, value: none}
+  framework:
+    mpi:
+      binary: /usr/local/bin/all_reduce_perf_mpi
+      mpirunPath: /usr/local/mpi/bin/mpirun
+      args: ["-b", "8", "-e", "64M", "-f", "2", "-g", "1", "-n", "20"]
+  bandwidthMeasurement:
+    logProfileRef: nccl-bandwidth
+    testType: all_reduce

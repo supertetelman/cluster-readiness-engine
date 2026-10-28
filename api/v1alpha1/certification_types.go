@@ -155,6 +155,10 @@ type CategoryResources struct {
 // +kubebuilder:validation:XValidation:rule="!has(self.networkAttachments) || !has(self.nicResourceName)",message="networkAttachments and nicResourceName are mutually exclusive"
 // +kubebuilder:validation:XValidation:rule="!has(self.networkAttachments) || !has(self.rdmaDeviceAccess) || self.rdmaDeviceAccess != 'hostPath'",message="networkAttachments cannot be combined with rdmaDeviceAccess: hostPath"
 type CategoryOptions struct {
+	// backend selects the workload scheduling backend.
+	// +optional
+	Backend *SchedulingBackend `json:"backend,omitempty"`
+
 	// nodesPerJob is the number of nodes per job for multi-node workloads.
 	//
 	// It is a per-job group size, not a total: a Certification always covers

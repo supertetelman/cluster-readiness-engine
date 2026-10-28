@@ -260,7 +260,7 @@ func (r *BandwidthMeasurementReconciler) handleRunning(ctx context.Context, meas
 	}
 
 	discoverer := podutil.NewWorkerDiscoverer(newPodReader(r.Client, r.APIReader))
-	pod, err := discoverer.GetReplicatedJobPod(ctx, measurement.Namespace, workloadName, replicatedJobName)
+	pod, err := discoverer.GetReplicatedJobPod(ctx, measurement.Namespace, workloadName, replicatedJobName, job.Status.WorkloadRef.Kind)
 	if err != nil {
 		log.Info("Pod not found yet, requeueing", "replicatedJob", replicatedJobName, "error", err)
 		return ctrl.Result{RequeueAfter: r.getRequeueInterval()}, nil
@@ -559,7 +559,7 @@ func (r *BandwidthMeasurementReconciler) readFinalResults(ctx context.Context, m
 		replicatedJobName = profile.Spec.WorkerStrategy.ReplicatedJobName
 	}
 	pod, err := podutil.NewWorkerDiscoverer(newPodReader(r.Client, r.APIReader)).GetReplicatedJobPod(
-		ctx, measurement.Namespace, job.Status.WorkloadRef.Name, replicatedJobName)
+		ctx, measurement.Namespace, job.Status.WorkloadRef.Name, replicatedJobName, job.Status.WorkloadRef.Kind)
 	if err != nil {
 		return finalRead{}, err
 	}

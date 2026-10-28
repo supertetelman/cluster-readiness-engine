@@ -1,0 +1,13 @@
+waitFor:
+  kind: Job
+  name: test-mpi-native
+  namespace: default
+  condition: InProgress
+  reason: WorkloadPending
+collect:
+  - kind: Job
+    name: test-mpi-native
+    namespace: default
+  - kind: MPIJob
+    name: test-mpi-native-workload
+    namespace: default

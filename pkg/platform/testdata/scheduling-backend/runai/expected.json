@@ -1,0 +1,24 @@
+{
+  "jobTemplate": {
+    "spec": {
+      "backend": {
+        "name": "runai",
+        "queue": "test-queue"
+      },
+      "workload": {
+        "mpiJob": {
+          "runPolicy": {},
+          "mpiReplicaSpecs": null
+        }
+      },
+      "workloadMetadata": {
+        "labels": {
+          "runai/queue": "test-queue"
+        }
+      }
+    }
+  },
+  "orchestration": {
+    "execution": {}
+  }
+}

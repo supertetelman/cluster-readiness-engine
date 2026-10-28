@@ -1,0 +1,13 @@
+waitFor:
+  kind: Job
+  name: test-mpi-runai
+  namespace: default
+  condition: InProgress
+  reason: WorkloadPending
+collect:
+  - kind: Job
+    name: test-mpi-runai
+    namespace: default
+  - kind: DistributedWorkload
+    name: test-mpi-runai-workload
+    namespace: default

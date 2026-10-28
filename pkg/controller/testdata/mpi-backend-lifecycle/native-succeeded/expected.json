@@ -1,0 +1,7 @@
+{
+  "deleted": true,
+  "kind": "MPIJob",
+  "outcome": "Succeeded",
+  "pendingReason": "WorkloadPending",
+  "status": "True"
+}

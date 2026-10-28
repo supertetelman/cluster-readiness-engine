@@ -103,6 +103,8 @@ github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnr
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
 github.com/klauspost/compress v1.20.1 h1:T7kKElXUMXrUJ2E9QhQhxFtcK5rPyLdsGZvdbLMPdiQ=
 github.com/klauspost/compress v1.20.1/go.mod h1:LUdAzn7YLVvxLpc7y3V1m40wESHTgc1422pwwBSKYuI=
+github.com/kubeflow/mpi-operator v0.6.0 h1:RzzG03oyQIiHe/SH2k19N+Hp4QkxEsG2l9G1T7US+ys=
+github.com/kubeflow/mpi-operator v0.6.0/go.mod h1:lu3cj3ESq3SdS29nbHC26TuXiTYYQYTHJ6fcy5Xv20c=
 github.com/kubeflow/trainer/v2 v2.2.1 h1:GsM80cgxnLnd8j8+lrX/Dpcvw7DYqpxkL0ni4XA/U7Y=
 github.com/kubeflow/trainer/v2 v2.2.1/go.mod h1:vdt+Q4altnU16a5pPV5X+3Ym34gWKfxu8EaRu8T8FqM=
 github.com/kylelemons/godebug v1.1.0 h1:RPNrshWIDI6G2gRW9EHilWtl7Z6Sb1BR0xunSBf0SNc=

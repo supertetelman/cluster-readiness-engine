@@ -85,6 +85,15 @@ func (a *TrainJobAdapter) InjectPodLabel(spec *nvcrev1alpha1.WorkloadSpec, key, 
 // launcher must not gain one here. The worker label (InjectPodLabel) is
 // separate and stays on the workers only.
 func InjectLauncherPodLabel(spec *nvcrev1alpha1.WorkloadSpec, key, value string) {
+	if spec.MPIJob != nil {
+		if launcher := spec.MPIJob.MPIReplicaSpecs["Launcher"]; launcher != nil {
+			if launcher.Template.Labels == nil {
+				launcher.Template.Labels = map[string]string{}
+			}
+			launcher.Template.Labels[key] = value
+		}
+		return
+	}
 	if !HasLauncherTarget(spec) {
 		return
 	}
@@ -232,6 +241,9 @@ func workerTargetJob(patches []trainerv1alpha1.RuntimePatch) string {
 // target in its runtimePatches. Used by the workflow controller to decide
 // whether to apply global tolerations (only MPI workloads need them).
 func HasLauncherTarget(spec *nvcrev1alpha1.WorkloadSpec) bool {
+	if spec.MPIJob != nil {
+		return spec.MPIJob.MPIReplicaSpecs["Launcher"] != nil
+	}
 	if spec.TrainJob == nil {
 		return false
 	}

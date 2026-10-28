@@ -17,6 +17,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	trainerv1alpha1 "github.com/kubeflow/trainer/v2/pkg/apis/trainer/v1alpha1"
 
 	"k8s.io/apimachinery/pkg/runtime"
@@ -110,6 +111,7 @@ func init() {
 
 	utilruntime.Must(nvcrev1alpha1.AddToScheme(scheme))
 	utilruntime.Must(trainerv1alpha1.AddToScheme(scheme))
+	utilruntime.Must(mpiv2beta1.AddToScheme(scheme))
 	// +kubebuilder:scaffold:scheme
 }
 

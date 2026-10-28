@@ -178,11 +178,18 @@ func (r *Reader) JobPodsOnNode(ctx context.Context, node string) ([]corev1.Pod, 
 // WorkloadPods returns a workload's pods from the API server: every pod JobSet
 // labelled with the workload's name, in one replicatedJob when replicatedJob
 // is not empty. Launchers carry no JobLabel, so the cache cannot hold them.
-func (r *Reader) WorkloadPods(ctx context.Context, namespace, workload, replicatedJob string) ([]corev1.Pod, error) {
-	selector := client.MatchingLabels{jobSetNameLabel: workload}
+func (r *Reader) WorkloadPods(ctx context.Context, namespace, workload, replicatedJob string, kinds ...string) ([]corev1.Pod, error) {
+	nameKey, roleKey := jobSetNameLabel, replicatedJobNameLabel
+	if len(kinds) > 0 && (kinds[0] == "MPIJob" || kinds[0] == "DistributedWorkload") {
+		nameKey, roleKey = "training.kubeflow.org/job-name", "training.kubeflow.org/job-role"
+		if replicatedJob == "node" {
+			replicatedJob = "worker"
+		}
+	}
+	selector := client.MatchingLabels{nameKey: workload}
 	target := namespace + "/" + workload
 	if replicatedJob != "" {
-		selector[replicatedJobNameLabel] = replicatedJob
+		selector[roleKey] = replicatedJob
 		target += "/" + replicatedJob
 	}
 	pods, err := list(ctx, r.live, client.InNamespace(namespace), selector)

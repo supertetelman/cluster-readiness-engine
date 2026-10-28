@@ -551,7 +551,7 @@ func (r *WorkflowReconciler) resolveWorkflowJobSize(
 		}
 	}
 
-	adapter, err := workload.ForSpec(&workflow.Spec.JobTemplate.Spec.Workload)
+	adapter, err := workload.ForBackend(&workflow.Spec.JobTemplate.Spec.Workload, workflow.Spec.JobTemplate.Spec.Backend)
 	if err != nil {
 		fail(fmt.Sprintf("Failed to determine workload adapter: %v", err))
 		return 0, err
@@ -1581,7 +1581,7 @@ func (r *WorkflowReconciler) createJobForGroup(ctx context.Context, workflow *nv
 	}
 
 	// Constrain where this job's pods can land.
-	adapter, err := workload.ForSpec(&job.Spec.Workload)
+	adapter, err := workload.ForBackend(&job.Spec.Workload, job.Spec.Backend)
 	if err != nil {
 		return fmt.Errorf("failed to get workload adapter: %w", err)
 	}

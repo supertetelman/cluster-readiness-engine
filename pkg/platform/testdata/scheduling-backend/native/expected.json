@@ -1,0 +1,18 @@
+{
+  "jobTemplate": {
+    "spec": {
+      "backend": {
+        "name": "kubernetes"
+      },
+      "workload": {
+        "mpiJob": {
+          "runPolicy": {},
+          "mpiReplicaSpecs": null
+        }
+      }
+    }
+  },
+  "orchestration": {
+    "execution": {}
+  }
+}

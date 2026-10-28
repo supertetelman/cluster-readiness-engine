@@ -669,6 +669,9 @@ func (r *WorkloadRunReconciler) buildWorkflowSpecWithWarning(
 		workflowSpec, spec.GangScheduler, spec.WorkloadMetadata); err != nil {
 		return nil, "", err
 	}
+	if err := platform.ApplySchedulingBackend(workflowSpec, spec.Backend); err != nil {
+		return nil, "", err
+	}
 
 	return workflowSpec, archFallbackMessage, nil
 }

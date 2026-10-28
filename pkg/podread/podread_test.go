@@ -239,3 +239,21 @@ func TestEmptyIsNotAnError(t *testing.T) {
 	assert.Empty(t, pods)
 	assert.Equal(t, before+1, testutil.ToFloat64(podReadsTotal.WithLabelValues("NamespacePods", sourceLive, resultEmpty)))
 }
+
+func TestNativeRunaiMPIReadsUncachedLauncher(t *testing.T) {
+	launcher := &corev1.Pod{Name: "mpi-launcher", Namespace: testNamespace, Labels: map[string]string{
+		"training.kubeflow.org/job-name": "native-mpi", "training.kubeflow.org/job-role": "launcher",
+	}}
+	worker := &corev1.Pod{Name: "mpi-worker", Namespace: testNamespace, Labels: map[string]string{
+		"training.kubeflow.org/job-name": "native-mpi", "training.kubeflow.org/job-role": "worker", JobLabel: testJob,
+	}}
+	cached := fake.NewClientBuilder().WithScheme(clientgoscheme.Scheme).WithObjects(worker).Build()
+	live := fake.NewClientBuilder().WithScheme(clientgoscheme.Scheme).WithObjects(worker, launcher).Build()
+	reader := New(cached, live)
+	pods, err := reader.WorkloadPods(context.Background(), testNamespace, "native-mpi", "launcher", "DistributedWorkload")
+	require.NoError(t, err)
+	assert.Equal(t, []string{launcher.Name}, names(pods))
+	pods, err = reader.WorkloadPods(context.Background(), testNamespace, "native-mpi", "node", "DistributedWorkload")
+	require.NoError(t, err)
+	assert.Equal(t, []string{worker.Name}, names(pods))
+}

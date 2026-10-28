@@ -6,6 +6,7 @@ package v1alpha1
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	mpiv2beta1 "github.com/kubeflow/mpi-operator/pkg/apis/kubeflow/v2beta1"
 	trainerv1alpha1 "github.com/kubeflow/trainer/v2/pkg/apis/trainer/v1alpha1"
 )
 
@@ -127,6 +128,15 @@ type WorkloadReference struct {
 // +kubebuilder:validation:MinProperties=1
 // +kubebuilder:validation:MaxProperties=1
 type WorkloadSpec struct {
+	// mpiJob configures a Kubeflow MPI Operator v2beta1 workload.
+	// The MPI Operator validates its spec. Preserve it here instead of
+	// duplicating two complete Pod schemas in every NVCRE CRD and Helm release.
+	// +kubebuilder:pruning:PreserveUnknownFields
+	// +kubebuilder:validation:Schemaless
+	// +kubebuilder:validation:Type=object
+	// +optional
+	MPIJob *mpiv2beta1.MPIJobSpec `json:"mpiJob,omitempty"`
+
 	// trainJob configures a Kubeflow TrainJob workload.
 	// +optional
 	TrainJob *trainerv1alpha1.TrainJobSpec `json:"trainJob,omitempty"`
@@ -211,7 +221,21 @@ type GoodputMeasurementConfig struct {
 	SampleInterval *metav1.Duration `json:"sampleInterval,omitempty"`
 }
 
+// SchedulingBackend selects how the shared workload is submitted to a platform.
+type SchedulingBackend struct {
+	// name selects the submission platform. Run:ai creates native Run:ai workload CRDs.
+	// Omitted backend preserves existing Kubernetes behavior.
+	// +kubebuilder:validation:Enum=kubernetes;runai
+	Name string `json:"name"`
+
+	// queue names an existing Run:ai queue. Required for Run:ai.
+	// +optional
+	// +kubebuilder:validation:MaxLength=63
+	Queue string `json:"queue,omitempty"`
+}
+
 // JobSpec defines the desired state of Job
+// +kubebuilder:validation:XValidation:rule="has(self.backend) == has(oldSelf.backend)",message="backend cannot be added or removed after creation"
 //
 // The workloadMetadata presence rule lives here rather than on the field
 // because a transition rule scoped to an optional field does not run when that
@@ -226,6 +250,11 @@ type GoodputMeasurementConfig struct {
 // +kubebuilder:validation:XValidation:rule="has(self.goodputMeasurement) == has(oldSelf.goodputMeasurement)",message="goodputMeasurement cannot be added or removed after creation"
 // +kubebuilder:validation:XValidation:rule="has(self.bandwidthMeasurement) == has(oldSelf.bandwidthMeasurement)",message="bandwidthMeasurement cannot be added or removed after creation"
 type JobSpec struct {
+	// backend selects the workload scheduling backend.
+	// +optional
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="backend is immutable"
+	Backend *SchedulingBackend `json:"backend,omitempty"`
+
 	// workload defines the workload to run.
 	// The workload is created as a child resource of the Job.
 	// +kubebuilder:validation:Required

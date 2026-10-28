@@ -189,6 +189,10 @@ type WorkloadOrchestration struct {
 // WorkloadRunSpec defines the desired state of WorkloadRun.
 // +kubebuilder:validation:XValidation:rule="!has(self.networkAttachments) || !has(self.nicResourceName)",message="networkAttachments and nicResourceName are mutually exclusive"
 type WorkloadRunSpec struct {
+	// backend selects the workload scheduling backend.
+	// +optional
+	Backend *SchedulingBackend `json:"backend,omitempty"`
+
 	// target specifies which nodes to run the workload on.
 	// When omitted, all GPU nodes (nvidia.com/gpu.present=true) are selected.
 	// GPU architecture and CSP platform are auto-detected from target nodes.

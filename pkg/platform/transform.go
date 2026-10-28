@@ -39,6 +39,8 @@ const (
 // ResolvedWorkflowTransforms carries the intents applied to a WorkflowSpec
 // after catalog and platform overrides have resolved.
 type ResolvedWorkflowTransforms struct {
+	Backend *nvcrev1alpha1.SchedulingBackend
+
 	// GangScheduler is the owner's gang-scheduling intent, before defaulting.
 	GangScheduler *nvcrev1alpha1.GangSchedulerSpec
 
@@ -110,6 +112,9 @@ func ApplyResolvedWorkflowTransforms(
 	}
 
 	spec.GangScheduler = ResolvedGangScheduler(t.GangScheduler)
+	if err := ApplySchedulingBackend(spec, t.Backend); err != nil {
+		return err
+	}
 	return ValidateResolvedJobTemplate(
 		&spec.JobTemplate.Spec, spec.Dependencies, spec.GangScheduler,
 		JobTemplateWorkloadLabelsPath)
@@ -209,6 +214,16 @@ func ValidateResolvedJobTemplate(
 	gs *nvcrev1alpha1.GangSchedulerSpec,
 	workloadLabelsPath string,
 ) error {
+	if js.Backend != nil {
+		workflow := &nvcrev1alpha1.WorkflowSpec{
+			JobTemplate:  nvcrev1alpha1.JobTemplateSpec{Spec: *js},
+			Dependencies: deps, GangScheduler: gs,
+		}
+		if err := ApplySchedulingBackend(workflow, js.Backend); err != nil {
+			return err
+		}
+		*js, gs = workflow.JobTemplate.Spec, workflow.GangScheduler
+	}
 	if err := workload.ValidateLabels(
 		workload.LabelsOf(js.WorkloadMetadata), workloadLabelsPath); err != nil {
 		return err

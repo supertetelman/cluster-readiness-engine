@@ -1,0 +1,119 @@
+# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+# SPDX-License-Identifier: Apache-2.0
+
+# Use the same definition for Kubernetes and Run:ai; change only backend.
+apiVersion: nvcre.nvidia.com/v1alpha1
+kind: Workflow
+metadata:
+  name: mpi-nccl
+spec:
+  orchestration:
+    placement: Unpinned
+    execution:
+      maxConcurrent: 1
+      timeoutPerJob: 20m
+    iterations: 1
+    target:
+      nodeSelector:
+        nvidia.com/gpu.present: "true"
+  jobTemplate:
+    spec:
+      backend:
+        name: kubernetes
+      bandwidthMeasurement:
+        logProfileRef: nccl-bandwidth
+        sampleInterval: 5s
+        testType: all_reduce
+      workload:
+        mpiJob:
+          slotsPerWorker: 1
+          sshAuthMountPath: /tmp/mpi-ssh-raw
+          runPolicy:
+            cleanPodPolicy: None
+            backoffLimit: 0
+          mpiReplicaSpecs:
+            Launcher:
+              replicas: 1
+              restartPolicy: Never
+              template:
+                spec:
+                  containers:
+                    - name: launcher
+                      image: nvcr.io/nvidia/pytorch:26.01-py3
+                      command: [sh, -ec]
+                      args:
+                        - |
+                          mkdir -p /root/.ssh
+                          chmod 700 /root/.ssh
+                          cp /tmp/mpi-ssh-raw/* /root/.ssh/
+                          chmod 600 /root/.ssh/id_rsa
+                          chmod 644 /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+                          deadline=$(( $(date +%s) + 240 ))
+                          while read -r host rest; do
+                            until ssh -n -o BatchMode=yes -o ConnectTimeout=2 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null "$host" true; do
+                              if test "$(date +%s)" -ge "$deadline"; then
+                                echo "Timed out waiting for MPI worker $host" >&2
+                                exit 1
+                              fi
+                              sleep 2
+                            done
+                          done < "${OMPI_MCA_orte_default_hostfile:-/etc/mpi/hostfile}"
+                          exec "$@"
+                        - launcher
+                        - /usr/local/mpi/bin/mpirun
+                        - --allow-run-as-root
+                        - -np
+                        - "2"
+                        - --mca
+                        - plm_rsh_args
+                        - -o ConnectionAttempts=10 -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+                        - --mca
+                        - pml
+                        - ob1
+                        - --mca
+                        - btl
+                        - self,tcp
+                        - -x
+                        - NCCL_DEBUG=INFO
+                        - -x
+                        - NCCL_IB_DISABLE=1
+                        - -x
+                        - NCCL_NET=Socket
+                        - -x
+                        - NCCL_NET_PLUGIN=none
+                        - /usr/local/bin/all_reduce_perf_mpi
+                        - -b
+                        - "8"
+                        - -e
+                        - 64M
+                        - -f
+                        - "2"
+                        - -g
+                        - "1"
+                        - -n
+                        - "20"
+            Worker:
+              replicas: 2
+              restartPolicy: Never
+              template:
+                spec:
+                  containers:
+                    - name: worker
+                      image: nvcr.io/nvidia/pytorch:26.01-py3
+                      command: [sh, -ec]
+                      args:
+                        - |
+                          if ! test -x /usr/sbin/sshd; then
+                            timeout 120 apt-get -o Acquire::Retries=3 update
+                            timeout 120 apt-get install -y --no-install-recommends openssh-server
+                          fi
+                          mkdir -p /var/run/sshd /root/.ssh
+                          chmod 0755 /var/run/sshd
+                          chmod 700 /root/.ssh
+                          cp /tmp/mpi-ssh-raw/* /root/.ssh/
+                          chmod 600 /root/.ssh/id_rsa
+                          chmod 644 /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
+                          exec /usr/sbin/sshd -De
+                      resources:
+                        limits:
+                          nvidia.com/gpu: "1"

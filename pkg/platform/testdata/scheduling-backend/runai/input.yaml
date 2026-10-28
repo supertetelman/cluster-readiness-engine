@@ -1,0 +1,6 @@
+backend: {name: runai, queue: test-queue}
+workflow:
+  jobTemplate:
+    spec:
+      workload:
+        mpiJob: {}

@@ -1,0 +1,129 @@
+{
+  "nodes": 2,
+  "status": {
+    "Phase": "Pending",
+    "Reason": "Pending",
+    "Message": ""
+  },
+  "workload": {
+    "apiVersion": "run.ai/v2alpha1",
+    "kind": "DistributedWorkload",
+    "masterSpec": {
+      "command": {
+        "value": "'mpirun' '-np' '2' '/usr/local/bin/all_reduce_perf_mpi'"
+      },
+      "image": {
+        "value": "shared-mpi-test"
+      },
+      "labels": {
+        "items": {
+          "nvcre.nvidia.com/launcher": {
+            "value": "test"
+          }
+        }
+      },
+      "nodeAffinityRequired": {
+        "nodeSelectorTerms": [
+          {
+            "matchExpressions": [
+              {
+                "key": "pool",
+                "operator": "In",
+                "values": [
+                  "gpu"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "restartPolicy": {
+        "value": "Never"
+      },
+      "tolerations": {
+        "items": {
+          "0": {
+            "value": {
+              "operator": "Exists",
+              "tolerationKey": "nvidia.com/gpu"
+            }
+          }
+        }
+      }
+    },
+    "metadata": {
+      "labels": {
+        "runai/queue": "test-queue"
+      },
+      "name": "test-workload",
+      "namespace": "test"
+    },
+    "spec": {
+      "command": {
+        "value": "'/usr/sbin/sshd' '-De'"
+      },
+      "image": {
+        "value": "shared-mpi-test"
+      },
+      "jobType": "MPIJob",
+      "labels": {
+        "items": {
+          "nvcre.nvidia.com/job": {
+            "value": "test"
+          }
+        }
+      },
+      "mpiJob": {
+        "values": {
+          "launcherCreationPolicy": {
+            "value": "AtStartup"
+          },
+          "slotsPerWorker": {
+            "value": 1
+          }
+        }
+      },
+      "nodeAffinityRequired": {
+        "nodeSelectorTerms": [
+          {
+            "matchExpressions": [
+              {
+                "key": "pool",
+                "operator": "In",
+                "values": [
+                  "gpu"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "restartPolicy": {
+        "value": "Never"
+      },
+      "runPolicy": {
+        "values": {
+          "cleanPodPolicy": {
+            "value": "None"
+          }
+        }
+      },
+      "tolerations": {
+        "items": {
+          "0": {
+            "value": {
+              "operator": "Exists",
+              "tolerationKey": "nvidia.com/gpu"
+            }
+          }
+        }
+      },
+      "workers": {
+        "value": 2
+      }
+    },
+    "status": {
+      "phase": "Pending"
+    }
+  }
+}

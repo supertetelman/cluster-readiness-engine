@@ -1,0 +1,185 @@
+{
+  "DistributedWorkload/test-mpi-runai-workload": {
+    "apiVersion": "run.ai/v2alpha1",
+    "kind": "DistributedWorkload",
+    "masterSpec": {
+      "command": {
+        "value": "'mpirun' '-np' '2' '/usr/local/bin/all_reduce_perf_mpi'"
+      },
+      "image": {
+        "value": "shared-mpi-test"
+      },
+      "labels": {
+        "items": {
+          "nvcre.nvidia.com/launcher": {
+            "value": "test-mpi-runai"
+          }
+        }
+      },
+      "restartPolicy": {
+        "value": "Never"
+      }
+    },
+    "metadata": {
+      "labels": {
+        "app.kubernetes.io/managed-by": "nvcre",
+        "nvcre.nvidia.com/job": "test-mpi-runai",
+        "runai/queue": "test-queue"
+      },
+      "name": "test-mpi-runai-workload",
+      "namespace": "default",
+      "ownerReferences": [
+        {
+          "apiVersion": "nvcre.nvidia.com/v1alpha1",
+          "blockOwnerDeletion": true,
+          "controller": true,
+          "kind": "Job",
+          "name": "test-mpi-runai",
+          "uid": ""
+        }
+      ]
+    },
+    "spec": {
+      "command": {
+        "value": "'/usr/sbin/sshd' '-De'"
+      },
+      "image": {
+        "value": "shared-mpi-test"
+      },
+      "jobType": "MPIJob",
+      "labels": {
+        "items": {
+          "nvcre.nvidia.com/job": {
+            "value": "test-mpi-runai"
+          }
+        }
+      },
+      "mpiJob": {
+        "values": {
+          "launcherCreationPolicy": {
+            "value": "AtStartup"
+          },
+          "slotsPerWorker": {
+            "value": 1
+          }
+        }
+      },
+      "restartPolicy": {
+        "value": "Never"
+      },
+      "runPolicy": {
+        "values": {
+          "cleanPodPolicy": {
+            "value": "None"
+          }
+        }
+      },
+      "workers": {
+        "value": 2
+      }
+    }
+  },
+  "Job/test-mpi-runai": {
+    "kind": "Job",
+    "apiVersion": "nvcre.nvidia.com/v1alpha1",
+    "metadata": {
+      "name": "test-mpi-runai",
+      "namespace": "default",
+      "finalizers": [
+        "nvcre.nvidia.com/finalizer"
+      ]
+    },
+    "spec": {
+      "backend": {
+        "name": "runai",
+        "queue": "test-queue"
+      },
+      "workload": {
+        "mpiJob": {
+          "slotsPerWorker": 1,
+          "runPolicy": {
+            "cleanPodPolicy": "None"
+          },
+          "mpiReplicaSpecs": {
+            "Launcher": {
+              "replicas": 1,
+              "template": {
+                "metadata": {},
+                "spec": {
+                  "containers": [
+                    {
+                      "name": "launcher",
+                      "image": "shared-mpi-test",
+                      "command": [
+                        "mpirun",
+                        "-np",
+                        "2",
+                        "/usr/local/bin/all_reduce_perf_mpi"
+                      ],
+                      "resources": {}
+                    }
+                  ]
+                }
+              },
+              "restartPolicy": "Never"
+            },
+            "Worker": {
+              "replicas": 2,
+              "template": {
+                "metadata": {},
+                "spec": {
+                  "containers": [
+                    {
+                      "name": "worker",
+                      "image": "shared-mpi-test",
+                      "command": [
+                        "/usr/sbin/sshd",
+                        "-De"
+                      ],
+                      "resources": {}
+                    }
+                  ]
+                }
+              },
+              "restartPolicy": "Never"
+            }
+          }
+        }
+      }
+    },
+    "status": {
+      "conditions": [
+        {
+          "type": "InProgress",
+          "status": "True",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "WorkloadPending",
+          "message": "Workload DistributedWorkload/test-mpi-runai-workload is pending"
+        },
+        {
+          "type": "Succeeded",
+          "status": "False",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "NotApplicable",
+          "message": ""
+        },
+        {
+          "type": "Failed",
+          "status": "False",
+          "observedGeneration": 1,
+          "lastTransitionTime": null,
+          "reason": "NotApplicable",
+          "message": ""
+        }
+      ],
+      "workloadRef": {
+        "apiVersion": "run.ai/v2alpha1",
+        "kind": "DistributedWorkload",
+        "name": "test-mpi-runai-workload",
+        "namespace": "default"
+      }
+    }
+  }
+}

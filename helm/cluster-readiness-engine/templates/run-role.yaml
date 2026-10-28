@@ -82,3 +82,18 @@ rules:
   - delete
   - patch
   - update
+
+- apiGroups:
+  - kubeflow.org
+  resources:
+  - mpijobs
+  verbs:
+  - create
+  - delete
+  - patch
+  - update
+
+# Native Run:ai distributed training, read live when selected.
+- apiGroups: [run.ai]
+  resources: [distributedworkloads]
+  verbs: [create, update, patch, delete]
